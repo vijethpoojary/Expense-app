@@ -19,6 +19,15 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Health check route
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/salary', require('./routes/salaryRoutes'));
