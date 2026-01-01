@@ -1,0 +1,220 @@
+const Expense = require('../models/Expense');
+const Investment = require('../models/Investment');
+
+// Get comprehensive analytics
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    const now = new Date();
+    
+    // Get start of today
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // Get start of week (Monday)
+    const startOfWeek = new Date(startOfToday);
+    const dayOfWeek = startOfToday.getDay();
+    const diff = startOfToday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Get start of month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Overall Expenses (all source types)
+    const overallToday = await Expense.aggregate([
+      { $match: { date: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const overallWeek = await Expense.aggregate([
+      { $match: { date: { $gte: startOfWeek } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const overallMonth = await Expense.aggregate([
+      { $match: { date: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // Salary Expenses (only sourceType = 'salary')
+    const salaryToday = await Expense.aggregate([
+      { $match: { sourceType: 'salary', date: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const salaryWeek = await Expense.aggregate([
+      { $match: { sourceType: 'salary', date: { $gte: startOfWeek } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const salaryMonth = await Expense.aggregate([
+      { $match: { sourceType: 'salary', date: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // Other Expenses (sourceType = 'other')
+    const otherToday = await Expense.aggregate([
+      { $match: { sourceType: 'other', date: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const otherWeek = await Expense.aggregate([
+      { $match: { sourceType: 'other', date: { $gte: startOfWeek } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const otherMonth = await Expense.aggregate([
+      { $match: { sourceType: 'other', date: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    // Investment Analytics
+    const investmentToday = await Investment.aggregate([
+      { $match: { date: { $gte: startOfToday } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const investmentWeek = await Investment.aggregate([
+      { $match: { date: { $gte: startOfWeek } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const investmentMonth = await Investment.aggregate([
+      { $match: { date: { $gte: startOfMonth } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    res.json({
+      expenses: {
+        overall: {
+          today: overallToday[0]?.total || 0,
+          week: overallWeek[0]?.total || 0,
+          month: overallMonth[0]?.total || 0
+        },
+        salary: {
+          today: salaryToday[0]?.total || 0,
+          week: salaryWeek[0]?.total || 0,
+          month: salaryMonth[0]?.total || 0
+        },
+        other: {
+          today: otherToday[0]?.total || 0,
+          week: otherWeek[0]?.total || 0,
+          month: otherMonth[0]?.total || 0
+        }
+      },
+      investments: {
+        today: investmentToday[0]?.total || 0,
+        week: investmentWeek[0]?.total || 0,
+        month: investmentMonth[0]?.total || 0
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get monthly summary
+exports.getMonthlySummary = async (req, res, next) => {
+  try {
+    const { year, month } = req.query;
+    const targetYear = parseInt(year) || new Date().getFullYear();
+    const targetMonth = parseInt(month) || new Date().getMonth();
+    
+    const startOfMonth = new Date(targetYear, targetMonth, 1);
+    const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+
+    // Expenses by category
+    const expensesByCategory = await Expense.aggregate([
+      {
+        $match: {
+          date: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: '$category',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { total: -1 } }
+    ]);
+
+    // Expenses by source type
+    const expensesBySource = await Expense.aggregate([
+      {
+        $match: {
+          date: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: '$sourceType',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Investments by type
+    const investmentsByType = await Investment.aggregate([
+      {
+        $match: {
+          date: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: '$investmentType',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { total: -1 } }
+    ]);
+
+    // Daily breakdown
+    const dailyExpenses = await Expense.aggregate([
+      {
+        $match: {
+          date: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const dailyInvestments = await Investment.aggregate([
+      {
+        $match: {
+          date: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.json({
+      period: { year: targetYear, month: targetMonth + 1 },
+      expensesByCategory,
+      expensesBySource,
+      investmentsByType,
+      dailyExpenses,
+      dailyInvestments
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

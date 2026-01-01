@@ -1,0 +1,107 @@
+.investment-list {
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.investment-list-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.investment-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+.investment-item:hover {
+  background-color: var(--bg-secondary);
+}
+
+.investment-item:last-child {
+  border-bottom: none;
+}
+
+.investment-cell {
+  display: flex;
+  align-items: center;
+  color: var(--text-primary);
+}
+
+.investment-cell.amount {
+  font-weight: 600;
+  color: var(--success-color);
+}
+
+.investment-cell.name {
+  font-weight: 500;
+}
+
+.no-type {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.investment-cell.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-edit,
+.btn-delete {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.btn-edit:hover {
+  background-color: var(--bg-secondary);
+}
+
+.btn-delete:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 768px) {
+  .investment-list-header,
+  .investment-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .investment-header-item {
+    display: none;
+  }
+
+  .investment-item {
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+}
+
