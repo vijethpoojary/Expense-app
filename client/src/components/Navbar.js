@@ -26,6 +26,9 @@ const Navbar = ({ theme, toggleTheme }) => {
           <Link to="/summary" className={`nav-link ${isActive('/summary') ? 'active' : ''}`}>
             Summary
           </Link>
+          <Link to="/history" className={`nav-link ${isActive('/history') ? 'active' : ''}`}>
+            History
+          </Link>
           <button className="theme-toggle" onClick={toggleTheme}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>

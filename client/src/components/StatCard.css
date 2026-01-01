@@ -48,3 +48,40 @@
   font-weight: 600;
 }
 
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 1.25rem;
+  }
+
+  .stat-card-title {
+    font-size: 1rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-card-title {
+    font-size: 0.95rem;
+  }
+
+  .stat-values {
+    gap: 0.625rem;
+  }
+
+  .stat-item {
+    padding: 0.4rem 0;
+  }
+}
+

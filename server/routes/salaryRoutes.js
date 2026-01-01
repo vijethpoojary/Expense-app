@@ -11,6 +11,7 @@ const salaryValidation = [
 router.get('/', salaryController.getSalary);
 router.get('/stats', salaryController.getSalaryStats);
 router.post('/', salaryValidation, salaryController.updateSalary);
+router.post('/reset', salaryController.resetAll);
 
 module.exports = router;
 

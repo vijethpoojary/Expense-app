@@ -122,7 +122,7 @@
   .expense-list-header,
   .expense-item {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
   .expense-header-item {
@@ -132,19 +132,44 @@
   .expense-cell {
     display: flex;
     justify-content: space-between;
+    align-items: center;
   }
 
   .expense-cell::before {
     content: attr(data-label);
     font-weight: 600;
     color: var(--text-secondary);
+    margin-right: 1rem;
   }
 
   .expense-item {
     padding: 1rem;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    margin-bottom: 1rem;
+    margin-bottom: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .expense-item {
+    padding: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .expense-cell {
+    font-size: 0.95rem;
+    flex-wrap: wrap;
+  }
+
+  .expense-cell.name {
+    font-weight: 600;
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  .empty-state {
+    padding: 2rem 1rem;
+    font-size: 0.95rem;
   }
 }
 

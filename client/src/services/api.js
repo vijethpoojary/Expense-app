@@ -17,6 +17,7 @@ export const expenseAPI = {
   update: (id, data) => api.put(`/expenses/${id}`, data),
   delete: (id) => api.delete(`/expenses/${id}`),
   getCategories: () => api.get('/expenses/categories'),
+  getHistory: () => api.get('/expenses/history'),
 };
 
 // Salary APIs
@@ -24,6 +25,7 @@ export const salaryAPI = {
   get: () => api.get('/salary'),
   getStats: () => api.get('/salary/stats'),
   update: (data) => api.post('/salary', data),
+  resetAll: () => api.post('/salary/reset'),
 };
 
 // Investment APIs

@@ -42,6 +42,34 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (max-width: 768px) {
+  button,
+  .nav-link,
+  .btn-primary,
+  .btn-submit,
+  .btn-cancel,
+  .reset-all-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
 }
 
 code {

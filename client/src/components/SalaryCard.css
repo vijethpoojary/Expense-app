@@ -135,14 +135,52 @@
 }
 
 @media (max-width: 768px) {
+  .salary-card {
+    padding: 1.5rem;
+  }
+
   .salary-stats {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 
   .salary-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .salary-title {
+    font-size: 1.25rem;
+  }
+
+  .salary-stat-item {
+    padding: 0.875rem;
+  }
+
+  .salary-value {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .salary-card {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .salary-title {
+    font-size: 1.1rem;
+  }
+
+  .salary-stat-item {
+    padding: 0.75rem;
+  }
+
+  .salary-value {
+    font-size: 1.1rem;
+  }
+
+  .salary-label {
+    font-size: 0.85rem;
   }
 }
 

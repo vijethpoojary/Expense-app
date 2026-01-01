@@ -9,6 +9,14 @@ const salarySchema = new mongoose.Schema({
   effectiveFrom: {
     type: Date,
     default: Date.now
+  },
+  startDate: {
+    type: Date,
+    default: Date.now
+  },
+  lastResetDate: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
@@ -19,7 +27,13 @@ salarySchema.statics.getCurrentSalary = async function() {
   let salary = await this.findOne().sort({ effectiveFrom: -1 });
   if (!salary) {
     // Create default salary if none exists
-    salary = await this.create({ monthlySalary: 0, effectiveFrom: new Date() });
+    const now = new Date();
+    salary = await this.create({ 
+      monthlySalary: 0, 
+      effectiveFrom: now,
+      startDate: now,
+      lastResetDate: now
+    });
   }
   return salary;
 };

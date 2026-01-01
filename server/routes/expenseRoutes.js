@@ -12,6 +12,7 @@ const expenseValidation = [
 
 router.get('/', expenseController.getExpenses);
 router.get('/categories', expenseController.getCategories);
+router.get('/history', expenseController.getExpensesHistory);
 router.get('/:id', expenseController.getExpense);
 router.post('/', expenseValidation, expenseController.createExpense);
 router.put('/:id', expenseValidation, expenseController.updateExpense);

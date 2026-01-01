@@ -39,13 +39,118 @@
   color: var(--text-secondary);
 }
 
+.salary-input-section {
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2rem;
+  border-left: 4px solid var(--primary-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.salary-input-group {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+.salary-input-section label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+}
+
+.salary-input-section input {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.salary-input-section input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.reset-all-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--danger-color, #dc3545);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.reset-all-btn:hover {
+  background-color: var(--danger-hover, #c82333);
+}
+
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .dashboard-title {
     font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    margin: 1.5rem 0 0.75rem;
+  }
+
+  .salary-input-section {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem;
+  }
+
+  .salary-input-group {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .reset-all-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .loading {
+    padding: 2rem 1rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+  }
+
+  .salary-input-section {
+    padding: 1rem;
+  }
+
+  .stats-grid {
+    gap: 0.75rem;
   }
 }
 

@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import Expenses from './components/Expenses';
 import Investments from './components/Investments';
 import MonthlySummary from './components/MonthlySummary';
+import ExpensesHistory from './components/ExpensesHistory';
 
 function App() {
   const [theme, setTheme] = useState(() => {
@@ -32,6 +33,7 @@ function App() {
             <Route path="/expenses" element={<Expenses />} />
             <Route path="/investments" element={<Investments />} />
             <Route path="/summary" element={<MonthlySummary />} />
+            <Route path="/history" element={<ExpensesHistory />} />
           </Routes>
         </main>
       </div>

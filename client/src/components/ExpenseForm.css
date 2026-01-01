@@ -119,8 +119,50 @@
 }
 
 @media (max-width: 768px) {
+  .form-overlay {
+    padding: 0.5rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
   .form-container {
     padding: 1.5rem;
+    max-height: 95vh;
+  }
+
+  .form-title {
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-submit,
+  .btn-cancel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-overlay {
+    padding: 0;
+    padding-top: 1rem;
+  }
+
+  .form-container {
+    padding: 1.25rem;
+    border-radius: 8px 8px 0 0;
+    max-height: 100vh;
+  }
+
+  .form-title {
+    font-size: 1.1rem;
+  }
+
+  .expense-form {
+    gap: 1.25rem;
   }
 }
 
