@@ -168,9 +168,11 @@ exports.getSalaryStats = async (req, res, next) => {
     const usedThisWeek = salaryExpensesThisWeek[0]?.total || 0;
     const usedThisMonth = salaryExpensesThisMonth[0]?.total || 0;
     
-    // Monthly Salary = Current Salary - Total Expenses Since Last Reset
+    // Monthly Salary Display = Current Salary - Total Expenses Since Last Reset
     const monthlySalaryDisplay = Math.max(0, salary.monthlySalary - totalSinceReset);
-    const remaining = monthlySalaryDisplay; // Same as monthly salary display
+    
+    // Remaining This Month = Current Salary - Current Month's Expenses
+    const remaining = Math.max(0, salary.monthlySalary - usedThisMonth);
 
     res.json({
       monthlySalary: salary.monthlySalary, // Original salary amount
