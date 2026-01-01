@@ -9,7 +9,8 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:3000',
-    'https://expense-app-omega-wine.vercel.app'
+    'https://expense-app-omega-wine.vercel.app',
+    'https://app.vijeth.fun'
   ],
   credentials: true,
   optionsSuccessStatus: 200
