@@ -3,38 +3,48 @@ const Expense = require('../models/Expense');
 const { validationResult } = require('express-validator');
 
 // Helper function to calculate week period (Sunday to Saturday)
-const getCurrentWeekPeriod = (currentDate) => {
-  const current = new Date(currentDate);
-  current.setHours(0, 0, 0, 0);
+const getCurrentWeekPeriod = (year, month, date, timezoneOffset = 0) => {
+  // Create a date for today at midnight in user's timezone (as UTC date)
+  const todayInUserTZ = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
   
-  // Get the day of week (0 = Sunday, 6 = Saturday)
-  const dayOfWeek = current.getDay();
+  // To get the correct day of week in user's timezone, we need to create a date
+  // that when converted to user's local time gives us the right day
+  // Create a date string in ISO format and parse it to get proper day calculation
+  const tempDate = new Date(todayInUserTZ.getTime() + (timezoneOffset * 60 * 1000));
+  const dayOfWeek = tempDate.getUTCDay();
   
   // Calculate days to subtract to get to Sunday (start of week)
   const daysToSubtract = dayOfWeek;
   
-  const weekStart = new Date(current);
-  weekStart.setDate(current.getDate() - daysToSubtract);
-  weekStart.setHours(0, 0, 0, 0);
+  // Get Sunday (start of week) at midnight in user's timezone
+  const weekStartInUserTZ = new Date(todayInUserTZ);
+  weekStartInUserTZ.setUTCDate(todayInUserTZ.getUTCDate() - daysToSubtract);
   
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
+  // Get Saturday (end of week) at 23:59:59.999 in user's timezone
+  const weekEndInUserTZ = new Date(weekStartInUserTZ);
+  weekEndInUserTZ.setUTCDate(weekStartInUserTZ.getUTCDate() + 6);
+  weekEndInUserTZ.setUTCHours(23, 59, 59, 999);
   
-  return { weekStart, weekEnd };
+  // Convert to UTC for database queries (subtract the offset to get UTC)
+  const weekStartUTC = new Date(weekStartInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+  const weekEndUTC = new Date(weekEndInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+  
+  return { weekStart: weekStartUTC, weekEnd: weekEndUTC };
 };
 
 // Helper function to calculate month period (first day to last day of calendar month)
-const getCurrentMonthPeriod = (currentDate) => {
-  const current = new Date(currentDate);
+const getCurrentMonthPeriod = (year, month, timezoneOffset = 0) => {
+  // Create month start (1st day) at midnight in user's timezone
+  const monthStartInUserTZ = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
   
-  const monthStart = new Date(current.getFullYear(), current.getMonth(), 1);
-  monthStart.setHours(0, 0, 0, 0);
+  // Get last day of month at 23:59:59.999 in user's timezone
+  const monthEndInUserTZ = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
   
-  const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0);
-  monthEnd.setHours(23, 59, 59, 999);
+  // Convert to UTC for database queries
+  const monthStartUTC = new Date(monthStartInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+  const monthEndUTC = new Date(monthEndInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
   
-  return { monthStart, monthEnd };
+  return { monthStart: monthStartUTC, monthEnd: monthEndUTC };
 };
 
 // Get current salary
@@ -88,16 +98,32 @@ exports.updateSalary = async (req, res, next) => {
 exports.getSalaryStats = async (req, res, next) => {
   try {
     const salary = await Salary.getCurrentSalary();
+    
+    // Get timezone offset from request (in minutes, e.g., +330 for IST, -300 for EST)
+    // If not provided, use UTC (0)
+    const timezoneOffset = req.query.timezoneOffset ? parseInt(req.query.timezoneOffset) : 0;
+    
+    // Get current time in UTC
     const now = new Date();
     
-    // Get start of today
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Get current date/time in user's timezone by adjusting UTC time
+    const userNow = new Date(now.getTime() + (timezoneOffset * 60 * 1000));
     
-    // Get current week period (Sunday to Saturday)
-    const { weekStart, weekEnd } = getCurrentWeekPeriod(now);
+    // Get start of today in user's timezone (midnight local time)
+    // Create a date representing midnight in user's timezone
+    const year = userNow.getUTCFullYear();
+    const month = userNow.getUTCMonth();
+    const date = userNow.getUTCDate();
     
-    // Get current month period (first day to last day of calendar month)
-    const { monthStart, monthEnd } = getCurrentMonthPeriod(now);
+    // This represents midnight in user's timezone, now convert to UTC for database query
+    const startOfTodayInUserTZ = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+    const startOfTodayUTC = new Date(startOfTodayInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+    
+    // Get current week period (Sunday to Saturday) in user's timezone
+    const { weekStart, weekEnd } = getCurrentWeekPeriod(year, month, date, timezoneOffset);
+    
+    // Get current month period (first day to last day of calendar month) in user's timezone
+    const { monthStart, monthEnd } = getCurrentMonthPeriod(year, month, timezoneOffset);
     
     // Calculate total expenses since last reset (for monthly salary calculation)
     const totalExpensesSinceReset = await Expense.aggregate([
@@ -115,12 +141,12 @@ exports.getSalaryStats = async (req, res, next) => {
       }
     ]);
 
-    // Calculate salary expenses for today
+    // Calculate salary expenses for today (using UTC-adjusted date)
     const salaryExpensesToday = await Expense.aggregate([
       {
         $match: {
           sourceType: 'salary',
-          date: { $gte: startOfToday }
+          date: { $gte: startOfTodayUTC }
         }
       },
       {

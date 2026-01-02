@@ -23,7 +23,11 @@ export const expenseAPI = {
 // Salary APIs
 export const salaryAPI = {
   get: () => api.get('/salary'),
-  getStats: () => api.get('/salary/stats'),
+  getStats: () => {
+    // Get user's timezone offset in minutes
+    const timezoneOffset = -new Date().getTimezoneOffset();
+    return api.get('/salary/stats', { params: { timezoneOffset } });
+  },
   update: (data) => api.post('/salary', data),
   resetAll: () => api.post('/salary/reset'),
 };
