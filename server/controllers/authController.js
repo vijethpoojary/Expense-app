@@ -96,10 +96,12 @@ exports.login = async (req, res, next) => {
     // Set HTTP-only secure cookie
     const isProduction = process.env.NODE_ENV === 'production';
     
+    // For cross-domain cookies (frontend and backend on different domains)
+    // sameSite must be 'none' and secure must be true
     res.cookie('token', token, {
       httpOnly: true, // Prevents JavaScript access (XSS protection)
-      secure: isProduction, // Only send over HTTPS in production
-      sameSite: isProduction ? 'strict' : 'lax', // CSRF protection
+      secure: true, // Always true for cross-domain (requires HTTPS)
+      sameSite: 'none', // Required for cross-domain cookies
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
       path: '/' // Available across the entire site
     });
@@ -126,8 +128,8 @@ exports.logout = async (req, res, next) => {
     // Clear the auth cookie
     res.cookie('token', '', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      secure: true, // Required for cross-domain
+      sameSite: 'none', // Required for cross-domain cookies
       maxAge: 0, // Expire immediately
       path: '/'
     });
