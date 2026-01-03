@@ -1,11 +1,19 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 const Navbar = ({ theme, toggleTheme }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <nav className="navbar">
@@ -29,6 +37,10 @@ const Navbar = ({ theme, toggleTheme }) => {
           <Link to="/history" className={`nav-link ${isActive('/history') ? 'active' : ''}`}>
             History
           </Link>
+          <span className="user-email">{user?.email}</span>
+          <button className="logout-btn" onClick={handleLogout} title="Logout">
+            Logout
+          </button>
           <button className="theme-toggle" onClick={toggleTheme}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>

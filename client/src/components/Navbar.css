@@ -61,6 +61,28 @@
   transform: scale(1.1);
 }
 
+.user-email {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+}
+
+.logout-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--primary-color);
+}
+
 @media (max-width: 768px) {
   .navbar-container {
     padding: 0 1rem;

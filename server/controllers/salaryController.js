@@ -2,6 +2,8 @@ const Salary = require('../models/Salary');
 const Expense = require('../models/Expense');
 const { validationResult } = require('express-validator');
 
+// SECURITY: All salary operations must be scoped to authenticated user's data
+
 // Helper function to calculate week period (Sunday to Saturday)
 const getCurrentWeekPeriod = (year, month, date, timezoneOffset = 0) => {
   // Create a date for today at midnight in user's timezone (as UTC date)
@@ -48,9 +50,10 @@ const getCurrentMonthPeriod = (year, month, timezoneOffset = 0) => {
 };
 
 // Get current salary
+// SECURITY: Only return salary for authenticated user
 exports.getSalary = async (req, res, next) => {
   try {
-    const salary = await Salary.getCurrentSalary();
+    const salary = await Salary.getCurrentSalary(req.user.id); // CRITICAL: User data isolation
     res.json(salary);
   } catch (error) {
     next(error);
@@ -58,6 +61,7 @@ exports.getSalary = async (req, res, next) => {
 };
 
 // Update or create salary
+// SECURITY: Only update/create salary for authenticated user
 exports.updateSalary = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -68,8 +72,8 @@ exports.updateSalary = async (req, res, next) => {
     const { monthlySalary } = req.body;
     const now = new Date();
     
-    // Get current salary
-    let currentSalary = await Salary.getCurrentSalary();
+    // Get current salary for this user
+    let currentSalary = await Salary.getCurrentSalary(req.user.id); // CRITICAL: User data isolation
     
     // Update or create salary record
     if (currentSalary && currentSalary._id) {
@@ -79,8 +83,9 @@ exports.updateSalary = async (req, res, next) => {
       }
       await currentSalary.save();
     } else {
-      // Create new
+      // Create new (shouldn't happen due to getCurrentSalary, but just in case)
       currentSalary = await Salary.create({
+        userId: req.user.id, // CRITICAL: User data isolation
         monthlySalary: monthlySalary || 0,
         effectiveFrom: now,
         startDate: now,
@@ -95,9 +100,10 @@ exports.updateSalary = async (req, res, next) => {
 };
 
 // Get salary statistics
+// SECURITY: Only return stats for authenticated user's data
 exports.getSalaryStats = async (req, res, next) => {
   try {
-    const salary = await Salary.getCurrentSalary();
+    const salary = await Salary.getCurrentSalary(req.user.id); // CRITICAL: User data isolation
     
     // Get timezone offset from request (in minutes, e.g., +330 for IST, -300 for EST)
     // If not provided, use UTC (0)
@@ -129,6 +135,7 @@ exports.getSalaryStats = async (req, res, next) => {
     const totalExpensesSinceReset = await Expense.aggregate([
       {
         $match: {
+          userId: req.user.id, // CRITICAL: User data isolation
           sourceType: 'salary',
           date: { $gte: salary.lastResetDate }
         }
@@ -145,6 +152,7 @@ exports.getSalaryStats = async (req, res, next) => {
     const salaryExpensesToday = await Expense.aggregate([
       {
         $match: {
+          userId: req.user.id, // CRITICAL: User data isolation
           sourceType: 'salary',
           date: { $gte: startOfTodayUTC }
         }
@@ -161,6 +169,7 @@ exports.getSalaryStats = async (req, res, next) => {
     const salaryExpensesThisWeek = await Expense.aggregate([
       {
         $match: {
+          userId: req.user.id, // CRITICAL: User data isolation
           sourceType: 'salary',
           date: { $gte: weekStart, $lte: weekEnd }
         }
@@ -177,6 +186,7 @@ exports.getSalaryStats = async (req, res, next) => {
     const salaryExpensesThisMonth = await Expense.aggregate([
       {
         $match: {
+          userId: req.user.id, // CRITICAL: User data isolation
           sourceType: 'salary',
           date: { $gte: monthStart, $lte: monthEnd }
         }
@@ -214,9 +224,10 @@ exports.getSalaryStats = async (req, res, next) => {
 };
 
 // Reset all (salary and tracking)
+// SECURITY: Only reset salary for authenticated user
 exports.resetAll = async (req, res, next) => {
   try {
-    const salary = await Salary.getCurrentSalary();
+    const salary = await Salary.getCurrentSalary(req.user.id); // CRITICAL: User data isolation
     const now = new Date();
     
     // Reset salary to 0 and update reset date

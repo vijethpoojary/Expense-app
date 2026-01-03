@@ -1,9 +1,12 @@
 const Expense = require('../models/Expense');
 const Investment = require('../models/Investment');
 
+// SECURITY: All analytics operations must be scoped to authenticated user's data
+
 // Get comprehensive analytics
 exports.getAnalytics = async (req, res, next) => {
   try {
+    const userId = req.user.id; // CRITICAL: User data isolation
     const now = new Date();
     
     // Get start of today
@@ -21,65 +24,65 @@ exports.getAnalytics = async (req, res, next) => {
 
     // Overall Expenses (all source types)
     const overallToday = await Expense.aggregate([
-      { $match: { date: { $gte: startOfToday } } },
+      { $match: { userId, date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const overallWeek = await Expense.aggregate([
-      { $match: { date: { $gte: startOfWeek } } },
+      { $match: { userId, date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const overallMonth = await Expense.aggregate([
-      { $match: { date: { $gte: startOfMonth } } },
+      { $match: { userId, date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     // Salary Expenses (only sourceType = 'salary')
     const salaryToday = await Expense.aggregate([
-      { $match: { sourceType: 'salary', date: { $gte: startOfToday } } },
+      { $match: { userId, sourceType: 'salary', date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const salaryWeek = await Expense.aggregate([
-      { $match: { sourceType: 'salary', date: { $gte: startOfWeek } } },
+      { $match: { userId, sourceType: 'salary', date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const salaryMonth = await Expense.aggregate([
-      { $match: { sourceType: 'salary', date: { $gte: startOfMonth } } },
+      { $match: { userId, sourceType: 'salary', date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     // Other Expenses (sourceType = 'other')
     const otherToday = await Expense.aggregate([
-      { $match: { sourceType: 'other', date: { $gte: startOfToday } } },
+      { $match: { userId, sourceType: 'other', date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const otherWeek = await Expense.aggregate([
-      { $match: { sourceType: 'other', date: { $gte: startOfWeek } } },
+      { $match: { userId, sourceType: 'other', date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const otherMonth = await Expense.aggregate([
-      { $match: { sourceType: 'other', date: { $gte: startOfMonth } } },
+      { $match: { userId, sourceType: 'other', date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     // Investment Analytics
     const investmentToday = await Investment.aggregate([
-      { $match: { date: { $gte: startOfToday } } },
+      { $match: { userId, date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const investmentWeek = await Investment.aggregate([
-      { $match: { date: { $gte: startOfWeek } } },
+      { $match: { userId, date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const investmentMonth = await Investment.aggregate([
-      { $match: { date: { $gte: startOfMonth } } },
+      { $match: { userId, date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
@@ -115,6 +118,7 @@ exports.getAnalytics = async (req, res, next) => {
 // Get monthly summary
 exports.getMonthlySummary = async (req, res, next) => {
   try {
+    const userId = req.user.id; // CRITICAL: User data isolation
     const { year, month } = req.query;
     const targetYear = parseInt(year) || new Date().getFullYear();
     const targetMonth = parseInt(month) || new Date().getMonth();
@@ -126,6 +130,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const expensesByCategory = await Expense.aggregate([
       {
         $match: {
+          userId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -143,6 +148,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const expensesBySource = await Expense.aggregate([
       {
         $match: {
+          userId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -159,6 +165,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const investmentsByType = await Investment.aggregate([
       {
         $match: {
+          userId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -176,6 +183,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const dailyExpenses = await Expense.aggregate([
       {
         $match: {
+          userId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -192,6 +200,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const dailyInvestments = await Investment.aggregate([
       {
         $match: {
+          userId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },

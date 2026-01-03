@@ -2,10 +2,11 @@ const Expense = require('../models/Expense');
 const { validationResult } = require('express-validator');
 
 // Get all expenses with optional filters
+// SECURITY: Always filter by userId from authenticated token
 exports.getExpenses = async (req, res, next) => {
   try {
     const { startDate, endDate, category, sourceType } = req.query;
-    const query = {};
+    const query = { userId: req.user.id }; // CRITICAL: User data isolation
 
     // Date range filter
     if (startDate || endDate) {
@@ -32,9 +33,14 @@ exports.getExpenses = async (req, res, next) => {
 };
 
 // Get single expense
+// SECURITY: Verify expense belongs to authenticated user
 exports.getExpense = async (req, res, next) => {
   try {
-    const expense = await Expense.findById(req.params.id);
+    const expense = await Expense.findOne({ 
+      _id: req.params.id,
+      userId: req.user.id // CRITICAL: User data isolation
+    });
+    
     if (!expense) {
       return res.status(404).json({ message: 'Expense not found' });
     }
@@ -45,6 +51,7 @@ exports.getExpense = async (req, res, next) => {
 };
 
 // Create expense
+// SECURITY: Set userId from authenticated token (never trust frontend)
 exports.createExpense = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -52,7 +59,11 @@ exports.createExpense = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const expense = await Expense.create(req.body);
+    // CRITICAL: Set userId from authenticated token, not from request body
+    const expense = await Expense.create({
+      ...req.body,
+      userId: req.user.id
+    });
     res.status(201).json(expense);
   } catch (error) {
     next(error);
@@ -60,6 +71,7 @@ exports.createExpense = async (req, res, next) => {
 };
 
 // Update expense
+// SECURITY: Verify expense belongs to authenticated user
 exports.updateExpense = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -67,9 +79,15 @@ exports.updateExpense = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const expense = await Expense.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+    // Remove userId from body if present (prevent user from changing ownership)
+    const { userId, ...updateData } = req.body;
+
+    const expense = await Expense.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        userId: req.user.id // CRITICAL: User data isolation
+      },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -84,9 +102,14 @@ exports.updateExpense = async (req, res, next) => {
 };
 
 // Delete expense
+// SECURITY: Verify expense belongs to authenticated user
 exports.deleteExpense = async (req, res, next) => {
   try {
-    const expense = await Expense.findByIdAndDelete(req.params.id);
+    const expense = await Expense.findOneAndDelete({ 
+      _id: req.params.id,
+      userId: req.user.id // CRITICAL: User data isolation
+    });
+    
     if (!expense) {
       return res.status(404).json({ message: 'Expense not found' });
     }
@@ -97,9 +120,13 @@ exports.deleteExpense = async (req, res, next) => {
 };
 
 // Get unique categories
+// SECURITY: Only return categories for authenticated user's expenses
 exports.getCategories = async (req, res, next) => {
   try {
-    const categories = await Expense.distinct('category', { category: { $ne: '' } });
+    const categories = await Expense.distinct('category', { 
+      userId: req.user.id, // CRITICAL: User data isolation
+      category: { $ne: '' } 
+    });
     res.json(categories);
   } catch (error) {
     next(error);
@@ -107,10 +134,11 @@ exports.getCategories = async (req, res, next) => {
 };
 
 // Get expenses history grouped by week and month
+// SECURITY: Only return expenses for authenticated user
 exports.getExpensesHistory = async (req, res, next) => {
   try {
-    // Get all expenses
-    const allExpenses = await Expense.find({}).sort({ date: 1 });
+    // Get all expenses for this user only
+    const allExpenses = await Expense.find({ userId: req.user.id }).sort({ date: 1 }); // CRITICAL: User data isolation
     
     // Helper to get week period for a given date (Sunday to Saturday)
     const getWeekPeriod = (expenseDate) => {

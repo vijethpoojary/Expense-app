@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const app = express();
@@ -12,14 +13,15 @@ const corsOptions = {
     'https://expense-app-omega-wine.vercel.app',
     'https://app.vijeth.fun'
   ],
-  credentials: true,
+  credentials: true, // Allow cookies to be sent
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+app.use(cookieParser()); // Parse cookies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check route
+// Health check route (public)
 app.get('/', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -28,11 +30,15 @@ app.get('/', (req, res) => {
   });
 });
 
-// Routes
-app.use('/api/expenses', require('./routes/expenseRoutes'));
-app.use('/api/salary', require('./routes/salaryRoutes'));
-app.use('/api/investments', require('./routes/investmentRoutes'));
-app.use('/api/analytics', require('./routes/analyticsRoutes'));
+// Auth routes (public)
+app.use('/api/auth', require('./routes/authRoutes'));
+
+// Protected routes (require authentication)
+const { authenticate } = require('./middleware/auth');
+app.use('/api/expenses', authenticate, require('./routes/expenseRoutes'));
+app.use('/api/salary', authenticate, require('./routes/salaryRoutes'));
+app.use('/api/investments', authenticate, require('./routes/investmentRoutes'));
+app.use('/api/analytics', authenticate, require('./routes/analyticsRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

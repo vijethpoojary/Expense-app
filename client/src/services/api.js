@@ -7,7 +7,16 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // CRITICAL: Send cookies with every request
 });
+
+// Auth APIs
+export const authAPI = {
+  register: (data) => api.post('/auth/register', data),
+  login: (data) => api.post('/auth/login', data),
+  logout: () => api.post('/auth/logout'),
+  getMe: () => api.get('/auth/me'),
+};
 
 // Expense APIs
 export const expenseAPI = {

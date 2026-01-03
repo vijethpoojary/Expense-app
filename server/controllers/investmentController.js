@@ -2,10 +2,11 @@ const Investment = require('../models/Investment');
 const { validationResult } = require('express-validator');
 
 // Get all investments with optional filters
+// SECURITY: Always filter by userId from authenticated token
 exports.getInvestments = async (req, res, next) => {
   try {
     const { startDate, endDate, investmentType } = req.query;
-    const query = {};
+    const query = { userId: req.user.id }; // CRITICAL: User data isolation
 
     // Date range filter
     if (startDate || endDate) {
@@ -27,9 +28,14 @@ exports.getInvestments = async (req, res, next) => {
 };
 
 // Get single investment
+// SECURITY: Verify investment belongs to authenticated user
 exports.getInvestment = async (req, res, next) => {
   try {
-    const investment = await Investment.findById(req.params.id);
+    const investment = await Investment.findOne({ 
+      _id: req.params.id,
+      userId: req.user.id // CRITICAL: User data isolation
+    });
+    
     if (!investment) {
       return res.status(404).json({ message: 'Investment not found' });
     }
@@ -40,6 +46,7 @@ exports.getInvestment = async (req, res, next) => {
 };
 
 // Create investment
+// SECURITY: Set userId from authenticated token (never trust frontend)
 exports.createInvestment = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -47,7 +54,11 @@ exports.createInvestment = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const investment = await Investment.create(req.body);
+    // CRITICAL: Set userId from authenticated token, not from request body
+    const investment = await Investment.create({
+      ...req.body,
+      userId: req.user.id
+    });
     res.status(201).json(investment);
   } catch (error) {
     next(error);
@@ -55,6 +66,7 @@ exports.createInvestment = async (req, res, next) => {
 };
 
 // Update investment
+// SECURITY: Verify investment belongs to authenticated user
 exports.updateInvestment = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -62,9 +74,15 @@ exports.updateInvestment = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const investment = await Investment.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+    // Remove userId from body if present (prevent user from changing ownership)
+    const { userId, ...updateData } = req.body;
+
+    const investment = await Investment.findOneAndUpdate(
+      { 
+        _id: req.params.id,
+        userId: req.user.id // CRITICAL: User data isolation
+      },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -79,9 +97,14 @@ exports.updateInvestment = async (req, res, next) => {
 };
 
 // Delete investment
+// SECURITY: Verify investment belongs to authenticated user
 exports.deleteInvestment = async (req, res, next) => {
   try {
-    const investment = await Investment.findByIdAndDelete(req.params.id);
+    const investment = await Investment.findOneAndDelete({ 
+      _id: req.params.id,
+      userId: req.user.id // CRITICAL: User data isolation
+    });
+    
     if (!investment) {
       return res.status(404).json({ message: 'Investment not found' });
     }
@@ -92,9 +115,13 @@ exports.deleteInvestment = async (req, res, next) => {
 };
 
 // Get unique investment types
+// SECURITY: Only return types for authenticated user's investments
 exports.getInvestmentTypes = async (req, res, next) => {
   try {
-    const types = await Investment.distinct('investmentType', { investmentType: { $ne: '' } });
+    const types = await Investment.distinct('investmentType', { 
+      userId: req.user.id, // CRITICAL: User data isolation
+      investmentType: { $ne: '' } 
+    });
     res.json(types);
   } catch (error) {
     next(error);
