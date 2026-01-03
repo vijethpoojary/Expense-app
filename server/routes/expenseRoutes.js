@@ -16,6 +16,8 @@ router.get('/history', expenseController.getExpensesHistory);
 router.get('/:id', expenseController.getExpense);
 router.post('/', expenseValidation, expenseController.createExpense);
 router.put('/:id', expenseValidation, expenseController.updateExpense);
+router.delete('/selected', expenseController.deleteSelectedExpenses);
+router.delete('/all', expenseController.deleteAllExpenses);
 router.delete('/:id', expenseController.deleteExpense);
 
 module.exports = router;

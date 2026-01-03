@@ -14,6 +14,8 @@ router.get('/types', investmentController.getInvestmentTypes);
 router.get('/:id', investmentController.getInvestment);
 router.post('/', investmentValidation, investmentController.createInvestment);
 router.put('/:id', investmentValidation, investmentController.updateInvestment);
+router.delete('/selected', investmentController.deleteSelectedInvestments);
+router.delete('/all', investmentController.deleteAllInvestments);
 router.delete('/:id', investmentController.deleteInvestment);
 
 module.exports = router;

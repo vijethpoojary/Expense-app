@@ -11,6 +11,7 @@ const Investments = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -101,16 +102,76 @@ const Investments = () => {
     });
   };
 
+  const handleSelectionChange = (ids) => {
+    setSelectedIds(ids);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      alert('Please select at least one investment to delete');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected investment(s)?`)) {
+      return;
+    }
+
+    try {
+      await investmentAPI.deleteSelected(selectedIds);
+      setSelectedIds([]);
+      fetchInvestments();
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
+      alert(`Successfully deleted ${selectedIds.length} investment(s)`);
+    } catch (error) {
+      console.error('Error deleting selected investments:', error);
+      alert('Failed to delete selected investments');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (investments.length === 0) {
+      alert('No investments to delete');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ALL ${investments.length} investments? This action cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      await investmentAPI.deleteAll();
+      setSelectedIds([]);
+      fetchInvestments();
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
+      alert('Successfully deleted all investments');
+    } catch (error) {
+      console.error('Error deleting all investments:', error);
+      alert('Failed to delete all investments');
+    }
+  };
+
   return (
     <div className="investments-page">
       <div className="page-header">
         <h1 className="page-title">Investments</h1>
-        <button className="btn-primary" onClick={() => {
-          setShowForm(true);
-          setEditingInvestment(null);
-        }}>
-          + Add Investment
-        </button>
+        <div className="header-actions">
+          {selectedIds.length > 0 && (
+            <button className="btn-danger" onClick={handleDeleteSelected}>
+              Delete Selected ({selectedIds.length})
+            </button>
+          )}
+          {investments.length > 0 && (
+            <button className="btn-danger" onClick={handleDeleteAll}>
+              Delete All
+            </button>
+          )}
+          <button className="btn-primary" onClick={() => {
+            setShowForm(true);
+            setEditingInvestment(null);
+          }}>
+            + Add Investment
+          </button>
+        </div>
       </div>
 
       <InvestmentFilters
@@ -142,6 +203,7 @@ const Investments = () => {
           investments={investments}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onSelectionChange={handleSelectionChange}
         />
       )}
     </div>

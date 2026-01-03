@@ -5,8 +5,10 @@ const { validationResult } = require('express-validator');
 // SECURITY: Always filter by userId from authenticated token
 exports.getExpenses = async (req, res, next) => {
   try {
+    const mongoose = require('mongoose');
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const { startDate, endDate, category, sourceType } = req.query;
-    const query = { userId: req.user.id }; // CRITICAL: User data isolation
+    const query = { userId: userIdObjectId }; // CRITICAL: User data isolation
 
     // Date range filter
     if (startDate || endDate) {
@@ -195,11 +197,62 @@ exports.deleteExpense = async (req, res, next) => {
 // SECURITY: Only return categories for authenticated user's expenses
 exports.getCategories = async (req, res, next) => {
   try {
+    const mongoose = require('mongoose');
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const categories = await Expense.distinct('category', { 
-      userId: req.user.id, // CRITICAL: User data isolation
+      userId: userIdObjectId, // CRITICAL: User data isolation
       category: { $ne: '' } 
     });
     res.json(categories);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete multiple expenses by IDs
+// SECURITY: Only delete expenses that belong to authenticated user
+exports.deleteSelectedExpenses = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'Please provide an array of expense IDs to delete' });
+    }
+
+    const mongoose = require('mongoose');
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    
+    // Delete only expenses that belong to the authenticated user
+    const result = await Expense.deleteMany({
+      _id: { $in: ids },
+      userId: userIdObjectId // CRITICAL: User data isolation
+    });
+
+    res.json({
+      message: `Successfully deleted ${result.deletedCount} expense(s)`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete all expenses for authenticated user
+// SECURITY: Only delete expenses that belong to authenticated user
+exports.deleteAllExpenses = async (req, res, next) => {
+  try {
+    const mongoose = require('mongoose');
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    
+    // Delete all expenses for the authenticated user
+    const result = await Expense.deleteMany({
+      userId: userIdObjectId // CRITICAL: User data isolation
+    });
+
+    res.json({
+      message: `Successfully deleted all ${result.deletedCount} expense(s)`,
+      deletedCount: result.deletedCount
+    });
   } catch (error) {
     next(error);
   }

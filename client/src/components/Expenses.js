@@ -11,6 +11,7 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -103,16 +104,76 @@ const Expenses = () => {
     });
   };
 
+  const handleSelectionChange = (ids) => {
+    setSelectedIds(ids);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      alert('Please select at least one expense to delete');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedIds.length} selected expense(s)?`)) {
+      return;
+    }
+
+    try {
+      await expenseAPI.deleteSelected(selectedIds);
+      setSelectedIds([]);
+      fetchExpenses();
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
+      alert(`Successfully deleted ${selectedIds.length} expense(s)`);
+    } catch (error) {
+      console.error('Error deleting selected expenses:', error);
+      alert('Failed to delete selected expenses');
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (expenses.length === 0) {
+      alert('No expenses to delete');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ALL ${expenses.length} expenses? This action cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      await expenseAPI.deleteAll();
+      setSelectedIds([]);
+      fetchExpenses();
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
+      alert('Successfully deleted all expenses');
+    } catch (error) {
+      console.error('Error deleting all expenses:', error);
+      alert('Failed to delete all expenses');
+    }
+  };
+
   return (
     <div className="expenses-page">
       <div className="page-header">
         <h1 className="page-title">Expenses</h1>
-        <button className="btn-primary" onClick={() => {
-          setShowForm(true);
-          setEditingExpense(null);
-        }}>
-          + Add Expense
-        </button>
+        <div className="header-actions">
+          {selectedIds.length > 0 && (
+            <button className="btn-danger" onClick={handleDeleteSelected}>
+              Delete Selected ({selectedIds.length})
+            </button>
+          )}
+          {expenses.length > 0 && (
+            <button className="btn-danger" onClick={handleDeleteAll}>
+              Delete All
+            </button>
+          )}
+          <button className="btn-primary" onClick={() => {
+            setShowForm(true);
+            setEditingExpense(null);
+          }}>
+            + Add Expense
+          </button>
+        </div>
       </div>
 
       <ExpenseFilters
@@ -144,6 +205,7 @@ const Expenses = () => {
           expenses={expenses}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onSelectionChange={handleSelectionChange}
         />
       )}
     </div>

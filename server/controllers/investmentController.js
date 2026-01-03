@@ -114,6 +114,55 @@ exports.deleteInvestment = async (req, res, next) => {
   }
 };
 
+// Delete multiple investments by IDs
+// SECURITY: Only delete investments that belong to authenticated user
+exports.deleteSelectedInvestments = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'Please provide an array of investment IDs to delete' });
+    }
+
+    const mongoose = require('mongoose');
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    
+    // Delete only investments that belong to the authenticated user
+    const result = await Investment.deleteMany({
+      _id: { $in: ids },
+      userId: userIdObjectId // CRITICAL: User data isolation
+    });
+
+    res.json({
+      message: `Successfully deleted ${result.deletedCount} investment(s)`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete all investments for authenticated user
+// SECURITY: Only delete investments that belong to authenticated user
+exports.deleteAllInvestments = async (req, res, next) => {
+  try {
+    const mongoose = require('mongoose');
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    
+    // Delete all investments for the authenticated user
+    const result = await Investment.deleteMany({
+      userId: userIdObjectId // CRITICAL: User data isolation
+    });
+
+    res.json({
+      message: `Successfully deleted all ${result.deletedCount} investment(s)`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get unique investment types
 // SECURITY: Only return types for authenticated user's investments
 exports.getInvestmentTypes = async (req, res, next) => {

@@ -1,88 +1,104 @@
 const Expense = require('../models/Expense');
 const Investment = require('../models/Investment');
+const mongoose = require('mongoose');
 
 // SECURITY: All analytics operations must be scoped to authenticated user's data
 
 // Get comprehensive analytics
 exports.getAnalytics = async (req, res, next) => {
   try {
-    const userId = req.user.id; // CRITICAL: User data isolation
+    // Convert userId string to ObjectId for MongoDB queries
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    
+    // Get timezone offset from request (if provided) or use 0 (UTC)
+    const timezoneOffset = req.query.timezoneOffset ? parseInt(req.query.timezoneOffset) : 0;
+    
+    // Get current time in UTC
     const now = new Date();
     
-    // Get start of today
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Get current date/time in user's timezone by adjusting UTC time
+    const userNow = new Date(now.getTime() + (timezoneOffset * 60 * 1000));
     
-    // Get start of week (Monday)
-    const startOfWeek = new Date(startOfToday);
-    const dayOfWeek = startOfToday.getDay();
-    const diff = startOfToday.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    startOfWeek.setDate(diff);
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Get start of today in user's timezone (midnight local time)
+    const year = userNow.getUTCFullYear();
+    const month = userNow.getUTCMonth();
+    const date = userNow.getUTCDate();
     
-    // Get start of month
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Create date at midnight in user's timezone, then convert to UTC for database query
+    const startOfTodayInUserTZ = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+    const startOfToday = new Date(startOfTodayInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+    
+    // Get start of week (Sunday to Saturday) in user's timezone
+    const dayOfWeek = userNow.getUTCDay();
+    const daysToSubtract = dayOfWeek; // Sunday = 0, so subtract 0 days for Sunday
+    const weekStartInUserTZ = new Date(Date.UTC(year, month, date - daysToSubtract, 0, 0, 0, 0));
+    const startOfWeek = new Date(weekStartInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+    
+    // Get start of month in user's timezone
+    const monthStartInUserTZ = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    const startOfMonth = new Date(monthStartInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
 
     // Overall Expenses (all source types)
     const overallToday = await Expense.aggregate([
-      { $match: { userId, date: { $gte: startOfToday } } },
+      { $match: { userId: userIdObjectId, date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const overallWeek = await Expense.aggregate([
-      { $match: { userId, date: { $gte: startOfWeek } } },
+      { $match: { userId: userIdObjectId, date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const overallMonth = await Expense.aggregate([
-      { $match: { userId, date: { $gte: startOfMonth } } },
+      { $match: { userId: userIdObjectId, date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     // Salary Expenses (only sourceType = 'salary')
     const salaryToday = await Expense.aggregate([
-      { $match: { userId, sourceType: 'salary', date: { $gte: startOfToday } } },
+      { $match: { userId: userIdObjectId, sourceType: 'salary', date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const salaryWeek = await Expense.aggregate([
-      { $match: { userId, sourceType: 'salary', date: { $gte: startOfWeek } } },
+      { $match: { userId: userIdObjectId, sourceType: 'salary', date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const salaryMonth = await Expense.aggregate([
-      { $match: { userId, sourceType: 'salary', date: { $gte: startOfMonth } } },
+      { $match: { userId: userIdObjectId, sourceType: 'salary', date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     // Other Expenses (sourceType = 'other')
     const otherToday = await Expense.aggregate([
-      { $match: { userId, sourceType: 'other', date: { $gte: startOfToday } } },
+      { $match: { userId: userIdObjectId, sourceType: 'other', date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const otherWeek = await Expense.aggregate([
-      { $match: { userId, sourceType: 'other', date: { $gte: startOfWeek } } },
+      { $match: { userId: userIdObjectId, sourceType: 'other', date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const otherMonth = await Expense.aggregate([
-      { $match: { userId, sourceType: 'other', date: { $gte: startOfMonth } } },
+      { $match: { userId: userIdObjectId, sourceType: 'other', date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     // Investment Analytics
     const investmentToday = await Investment.aggregate([
-      { $match: { userId, date: { $gte: startOfToday } } },
+      { $match: { userId: userIdObjectId, date: { $gte: startOfToday } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const investmentWeek = await Investment.aggregate([
-      { $match: { userId, date: { $gte: startOfWeek } } },
+      { $match: { userId: userIdObjectId, date: { $gte: startOfWeek } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const investmentMonth = await Investment.aggregate([
-      { $match: { userId, date: { $gte: startOfMonth } } },
+      { $match: { userId: userIdObjectId, date: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
@@ -118,7 +134,8 @@ exports.getAnalytics = async (req, res, next) => {
 // Get monthly summary
 exports.getMonthlySummary = async (req, res, next) => {
   try {
-    const userId = req.user.id; // CRITICAL: User data isolation
+    // Convert userId string to ObjectId for MongoDB queries
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const { year, month } = req.query;
     const targetYear = parseInt(year) || new Date().getFullYear();
     const targetMonth = parseInt(month) || new Date().getMonth();
@@ -130,7 +147,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const expensesByCategory = await Expense.aggregate([
       {
         $match: {
-          userId, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -148,7 +165,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const expensesBySource = await Expense.aggregate([
       {
         $match: {
-          userId, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -165,7 +182,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const investmentsByType = await Investment.aggregate([
       {
         $match: {
-          userId, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -183,7 +200,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const dailyExpenses = await Expense.aggregate([
       {
         $match: {
-          userId, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },
@@ -200,7 +217,7 @@ exports.getMonthlySummary = async (req, res, next) => {
     const dailyInvestments = await Investment.aggregate([
       {
         $match: {
-          userId, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation
           date: { $gte: startOfMonth, $lte: endOfMonth }
         }
       },

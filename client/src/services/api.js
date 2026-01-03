@@ -25,6 +25,8 @@ export const expenseAPI = {
   create: (data) => api.post('/expenses', data),
   update: (id, data) => api.put(`/expenses/${id}`, data),
   delete: (id) => api.delete(`/expenses/${id}`),
+  deleteSelected: (ids) => api.delete('/expenses/selected', { data: { ids } }),
+  deleteAll: () => api.delete('/expenses/all'),
   getCategories: () => api.get('/expenses/categories'),
   getHistory: () => api.get('/expenses/history'),
 };
@@ -48,12 +50,18 @@ export const investmentAPI = {
   create: (data) => api.post('/investments', data),
   update: (id, data) => api.put(`/investments/${id}`, data),
   delete: (id) => api.delete(`/investments/${id}`),
+  deleteSelected: (ids) => api.delete('/investments/selected', { data: { ids } }),
+  deleteAll: () => api.delete('/investments/all'),
   getTypes: () => api.get('/investments/types'),
 };
 
 // Analytics APIs
 export const analyticsAPI = {
-  getAnalytics: () => api.get('/analytics'),
+  getAnalytics: () => {
+    // Get user's timezone offset in minutes
+    const timezoneOffset = -new Date().getTimezoneOffset();
+    return api.get('/analytics', { params: { timezoneOffset } });
+  },
   getMonthlySummary: (year, month) => api.get('/analytics/monthly', { params: { year, month } }),
 };
 
