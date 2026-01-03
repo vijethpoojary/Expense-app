@@ -38,9 +38,12 @@ const ExpenseForm = ({ expense, categories, onSubmit, onCancel }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
+      // Get user's timezone offset in minutes
+      const timezoneOffset = -new Date().getTimezoneOffset();
       onSubmit({
         ...formData,
-        amount: parseFloat(formData.amount)
+        amount: parseFloat(formData.amount),
+        timezoneOffset: timezoneOffset
       });
     }
   };

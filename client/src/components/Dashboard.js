@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { salaryAPI, analyticsAPI } from '../services/api';
 import './Dashboard.css';
 import StatCard from './StatCard';
@@ -10,9 +11,29 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [monthlySalary, setMonthlySalary] = useState('');
   const [saving, setSaving] = useState(false);
+  const location = useLocation();
 
+  // Refresh data when component mounts or when navigating to dashboard
   useEffect(() => {
     fetchDashboardData();
+  }, [location.pathname]);
+
+  // Also refresh when window gains focus (user switches back to tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchDashboardData();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Listen for expense updates from other components
+  useEffect(() => {
+    const handleExpenseUpdate = () => {
+      fetchDashboardData();
+    };
+    window.addEventListener('expenseUpdated', handleExpenseUpdate);
+    return () => window.removeEventListener('expenseUpdated', handleExpenseUpdate);
   }, []);
 
 

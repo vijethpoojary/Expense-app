@@ -49,6 +49,8 @@ const Investments = () => {
       fetchInvestments();
       fetchInvestmentTypes();
       setShowForm(false);
+      // Dispatch custom event to notify Dashboard to refresh
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
     } catch (error) {
       console.error('Error creating investment:', error);
       throw error;
@@ -60,6 +62,8 @@ const Investments = () => {
       await investmentAPI.update(id, investmentData);
       fetchInvestments();
       setEditingInvestment(null);
+      // Dispatch custom event to notify Dashboard to refresh
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
     } catch (error) {
       console.error('Error updating investment:', error);
       throw error;
@@ -71,6 +75,8 @@ const Investments = () => {
       try {
         await investmentAPI.delete(id);
         fetchInvestments();
+        // Dispatch custom event to notify Dashboard to refresh
+        window.dispatchEvent(new CustomEvent('expenseUpdated'));
       } catch (error) {
         console.error('Error deleting investment:', error);
         alert('Failed to delete investment');

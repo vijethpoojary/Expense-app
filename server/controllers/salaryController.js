@@ -1,6 +1,7 @@
 const Salary = require('../models/Salary');
 const Expense = require('../models/Expense');
 const { validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 
 // SECURITY: All salary operations must be scoped to authenticated user's data
 
@@ -72,8 +73,11 @@ exports.updateSalary = async (req, res, next) => {
     const { monthlySalary } = req.body;
     const now = new Date();
     
+    // Convert userId string to ObjectId for MongoDB queries
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    
     // Get current salary for this user
-    let currentSalary = await Salary.getCurrentSalary(req.user.id); // CRITICAL: User data isolation
+    let currentSalary = await Salary.getCurrentSalary(userIdObjectId); // CRITICAL: User data isolation
     
     // Update or create salary record
     if (currentSalary && currentSalary._id) {
@@ -85,7 +89,7 @@ exports.updateSalary = async (req, res, next) => {
     } else {
       // Create new (shouldn't happen due to getCurrentSalary, but just in case)
       currentSalary = await Salary.create({
-        userId: req.user.id, // CRITICAL: User data isolation
+        userId: userIdObjectId, // CRITICAL: User data isolation - use ObjectId
         monthlySalary: monthlySalary || 0,
         effectiveFrom: now,
         startDate: now,
@@ -103,7 +107,9 @@ exports.updateSalary = async (req, res, next) => {
 // SECURITY: Only return stats for authenticated user's data
 exports.getSalaryStats = async (req, res, next) => {
   try {
-    const salary = await Salary.getCurrentSalary(req.user.id); // CRITICAL: User data isolation
+    // Convert userId string to ObjectId for MongoDB queries
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    const salary = await Salary.getCurrentSalary(userIdObjectId); // CRITICAL: User data isolation
     
     // Get timezone offset from request (in minutes, e.g., +330 for IST, -300 for EST)
     // If not provided, use UTC (0)
@@ -135,7 +141,7 @@ exports.getSalaryStats = async (req, res, next) => {
     const totalExpensesSinceReset = await Expense.aggregate([
       {
         $match: {
-          userId: req.user.id, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation - use ObjectId
           sourceType: 'salary',
           date: { $gte: salary.lastResetDate }
         }
@@ -149,12 +155,16 @@ exports.getSalaryStats = async (req, res, next) => {
     ]);
 
     // Calculate salary expenses for today (using UTC-adjusted date)
+    // Get end of today in user's timezone, converted to UTC
+    const endOfTodayInUserTZ = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
+    const endOfTodayUTC = new Date(endOfTodayInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+    
     const salaryExpensesToday = await Expense.aggregate([
       {
         $match: {
-          userId: req.user.id, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation - use ObjectId
           sourceType: 'salary',
-          date: { $gte: startOfTodayUTC }
+          date: { $gte: startOfTodayUTC, $lte: endOfTodayUTC }
         }
       },
       {
@@ -164,12 +174,12 @@ exports.getSalaryStats = async (req, res, next) => {
         }
       }
     ]);
-
+    
     // Calculate salary expenses for current week (rolling from startDate)
     const salaryExpensesThisWeek = await Expense.aggregate([
       {
         $match: {
-          userId: req.user.id, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation - use ObjectId
           sourceType: 'salary',
           date: { $gte: weekStart, $lte: weekEnd }
         }
@@ -186,7 +196,7 @@ exports.getSalaryStats = async (req, res, next) => {
     const salaryExpensesThisMonth = await Expense.aggregate([
       {
         $match: {
-          userId: req.user.id, // CRITICAL: User data isolation
+          userId: userIdObjectId, // CRITICAL: User data isolation - use ObjectId
           sourceType: 'salary',
           date: { $gte: monthStart, $lte: monthEnd }
         }

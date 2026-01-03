@@ -50,6 +50,8 @@ const Expenses = () => {
       fetchExpenses();
       fetchCategories();
       setShowForm(false);
+      // Dispatch custom event to notify Dashboard to refresh
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
     } catch (error) {
       console.error('Error creating expense:', error);
       throw error;
@@ -61,6 +63,8 @@ const Expenses = () => {
       await expenseAPI.update(id, expenseData);
       fetchExpenses();
       setEditingExpense(null);
+      // Dispatch custom event to notify Dashboard to refresh
+      window.dispatchEvent(new CustomEvent('expenseUpdated'));
     } catch (error) {
       console.error('Error updating expense:', error);
       throw error;
@@ -72,6 +76,8 @@ const Expenses = () => {
       try {
         await expenseAPI.delete(id);
         fetchExpenses();
+        // Dispatch custom event to notify Dashboard to refresh
+        window.dispatchEvent(new CustomEvent('expenseUpdated'));
       } catch (error) {
         console.error('Error deleting expense:', error);
         alert('Failed to delete expense');

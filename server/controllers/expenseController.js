@@ -59,11 +59,57 @@ exports.createExpense = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    // CRITICAL: Set userId from authenticated token, not from request body
-    const expense = await Expense.create({
+    // Convert date string to Date object if provided
+    const expenseData = {
       ...req.body,
       userId: req.user.id
-    });
+    };
+    
+    // Get timezone offset from request (if provided) or use 0 (UTC)
+    const timezoneOffset = req.body.timezoneOffset ? parseInt(req.body.timezoneOffset) : 0;
+    
+    // If date is provided as string, convert to Date object
+    if (expenseData.date && typeof expenseData.date === 'string') {
+      // Handle date string format (YYYY-MM-DD)
+      // Parse the date string and create a Date object at midnight in user's timezone
+      const dateParts = expenseData.date.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        // Create date at midnight in user's timezone
+        // The date string "2026-01-03" represents Jan 3 in user's local timezone
+        // We need to store it so that when queried with timezone offset, it matches
+        // If user selects Jan 3 in IST (UTC+5:30), we store it as Jan 3 00:00 IST = Jan 2 18:30 UTC
+        // So we subtract the timezone offset to convert to UTC
+        expenseData.date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+        // Adjust for timezone: if user is ahead of UTC, subtract offset to get UTC equivalent
+        expenseData.date = new Date(expenseData.date.getTime() - (timezoneOffset * 60 * 1000));
+      } else {
+        // Fallback to default parsing
+        expenseData.date = new Date(expenseData.date);
+        expenseData.date.setUTCHours(0, 0, 0, 0);
+      }
+    } else if (expenseData.date && !(expenseData.date instanceof Date)) {
+      // If it's not a string and not a Date, try to convert it
+      expenseData.date = new Date(expenseData.date);
+      expenseData.date.setUTCHours(0, 0, 0, 0);
+    } else if (!expenseData.date) {
+      // If no date provided, use today at midnight in user's timezone
+      const now = new Date();
+      const userNow = new Date(now.getTime() + (timezoneOffset * 60 * 1000));
+      const year = userNow.getUTCFullYear();
+      const month = userNow.getUTCMonth();
+      const date = userNow.getUTCDate();
+      const dateInUserTZ = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+      expenseData.date = new Date(dateInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+    }
+    
+    // Remove timezoneOffset from expenseData as it's not a field in the schema
+    delete expenseData.timezoneOffset;
+
+    // CRITICAL: Set userId from authenticated token, not from request body
+    const expense = await Expense.create(expenseData);
     res.status(201).json(expense);
   } catch (error) {
     next(error);
@@ -79,8 +125,34 @@ exports.updateExpense = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    // Remove userId from body if present (prevent user from changing ownership)
-    const { userId, ...updateData } = req.body;
+    // Remove userId and timezoneOffset from body if present
+    const { userId, timezoneOffset: tzOffset, ...updateData } = req.body;
+    
+    // Get timezone offset from request (if provided) or use 0 (UTC)
+    const timezoneOffset = tzOffset ? parseInt(tzOffset) : 0;
+    
+    // Convert date string to Date object if provided
+    if (updateData.date && typeof updateData.date === 'string') {
+      // Parse the date string and create a Date object at midnight in user's timezone
+      const dateParts = updateData.date.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        // Create date at midnight in user's timezone, then convert to UTC for storage
+        const dateInUserTZ = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+        // Convert to UTC by subtracting the timezone offset
+        updateData.date = new Date(dateInUserTZ.getTime() - (timezoneOffset * 60 * 1000));
+      } else {
+        // Fallback to default parsing
+        updateData.date = new Date(updateData.date);
+        updateData.date.setUTCHours(0, 0, 0, 0);
+      }
+    } else if (updateData.date && !(updateData.date instanceof Date)) {
+      // If it's not a string and not a Date, try to convert it
+      updateData.date = new Date(updateData.date);
+      updateData.date.setUTCHours(0, 0, 0, 0);
+    }
 
     const expense = await Expense.findOneAndUpdate(
       { 
