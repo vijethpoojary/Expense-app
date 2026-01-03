@@ -54,7 +54,8 @@
 
 .salary-input-group {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
+  align-items: flex-end;
   flex: 1;
 }
 
@@ -79,6 +80,34 @@
 .salary-input-section input:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+.salary-input-section input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-salary-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  height: fit-content;
+  min-height: 44px;
+}
+
+.save-salary-btn:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.save-salary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .reset-all-btn {
@@ -121,7 +150,12 @@
 
   .salary-input-group {
     flex-direction: column;
+    align-items: stretch;
     gap: 1rem;
+  }
+
+  .save-salary-btn {
+    width: 100%;
   }
 
   .reset-all-btn {

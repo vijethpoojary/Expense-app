@@ -82,12 +82,19 @@ const Dashboard = () => {
               type="number"
               value={monthlySalary}
               onChange={(e) => setMonthlySalary(e.target.value)}
-              onBlur={handleSaveSalary}
               min="0"
               step="1000"
               placeholder="Enter monthly salary"
+              disabled={saving}
             />
           </label>
+          <button 
+            className="save-salary-btn" 
+            onClick={handleSaveSalary}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
         </div>
         <button className="reset-all-btn" onClick={handleResetAll}>
           Reset All
