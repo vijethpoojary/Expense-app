@@ -56,6 +56,7 @@
   color: var(--text-primary);
   font-size: 1rem;
   transition: border-color 0.2s;
+  min-height: 44px; /* Touch-friendly */
 }
 
 .form-group input:focus,
@@ -149,12 +150,24 @@
   .form-overlay {
     padding: 0;
     padding-top: 1rem;
+    align-items: flex-end; /* Slide up from bottom on mobile */
   }
 
   .form-container {
     padding: 1.25rem;
-    border-radius: 8px 8px 0 0;
-    max-height: 100vh;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    width: 100%;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 
   .form-title {
@@ -163,6 +176,11 @@
 
   .expense-form {
     gap: 1.25rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 16px; /* Prevents zoom on iOS */
   }
 }
 

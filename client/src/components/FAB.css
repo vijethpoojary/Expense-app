@@ -1,0 +1,54 @@
+.fab {
+  position: fixed;
+  bottom: 5.5rem; /* Above bottom nav */
+  right: 1rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+}
+
+/* Show FAB only on mobile */
+@media (max-width: 768px) {
+  .fab {
+    display: flex;
+  }
+}
+
+.fab:active {
+  transform: scale(0.9);
+}
+
+.fab:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  background-color: var(--primary-hover);
+}
+
+.fab-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.fab-label {
+  display: none; /* Icon-only FAB */
+}
+
+/* Adjust for safe area on iOS */
+@media (max-width: 768px) {
+  .fab {
+    bottom: calc(5.5rem + env(safe-area-inset-bottom, 0));
+  }
+}
+

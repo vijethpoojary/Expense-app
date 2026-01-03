@@ -23,6 +23,7 @@
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s;
+  position: relative;
 }
 
 .investment-item:hover {
@@ -101,36 +102,126 @@
   box-shadow: var(--shadow);
 }
 
+/* Mobile card-based layout - Single row design */
 @media (max-width: 768px) {
-  .investment-list-header,
-  .investment-item {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .investment-header-item {
+  .investment-list-header {
     display: none;
   }
 
-  .investment-item {
-    padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    margin-bottom: 0.875rem;
-    background-color: var(--bg-card);
+  .investment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
-  .investment-cell {
+  .investment-item {
     display: flex;
-    justify-content: space-between;
+    flex-direction: row;
     align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--success-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .investment-item:active {
+    transform: scale(0.98);
+  }
+
+  /* All cells should be inline and in one row */
+  .investment-cell {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    white-space: nowrap;
   }
 
   .investment-cell::before {
-    content: attr(data-label);
+    display: none;
+  }
+
+  /* Checkbox on the left */
+  .investment-cell.checkbox-cell {
+    flex-shrink: 0;
+  }
+
+  .investment-cell.checkbox-cell input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Investment name */
+  .investment-cell.name {
     font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+  }
+
+  /* Amount */
+  .investment-cell.amount {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--success-color);
+  }
+
+  /* Type badge */
+  .investment-cell.type {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .investment-type-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
     color: var(--text-secondary);
-    margin-right: 1rem;
+    white-space: nowrap;
+  }
+
+  /* Hide date on mobile */
+  .investment-cell.date {
+    display: none;
+  }
+
+  /* Edit and Delete buttons as direct children */
+  .btn-edit,
+  .btn-delete {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 1rem;
+    padding: 0.25rem;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .btn-edit:hover {
+    background-color: var(--bg-secondary);
+  }
+
+  .btn-delete:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+
+  .desktop-only {
+    display: none;
   }
 }
 

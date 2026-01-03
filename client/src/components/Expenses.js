@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { expenseAPI } from '../services/api';
+import { useIsMobile } from '../hooks/useWindowSize';
 import ExpenseForm from './ExpenseForm';
 import ExpenseList from './ExpenseList';
 import ExpenseFilters from './ExpenseFilters';
+import FAB from './FAB';
 import './Expenses.css';
 
 const Expenses = () => {
@@ -12,6 +14,8 @@ const Expenses = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -156,32 +160,79 @@ const Expenses = () => {
     <div className="expenses-page">
       <div className="page-header">
         <h1 className="page-title">Expenses</h1>
-        <div className="header-actions">
-          {selectedIds.length > 0 && (
-            <button className="btn-danger" onClick={handleDeleteSelected}>
-              Delete Selected ({selectedIds.length})
+        {!isMobile && (
+          <div className="header-actions">
+            {selectedIds.length > 0 && (
+              <button className="btn-danger" onClick={handleDeleteSelected}>
+                Delete Selected ({selectedIds.length})
+              </button>
+            )}
+            {expenses.length > 0 && (
+              <button className="btn-danger" onClick={handleDeleteAll}>
+                Delete All
+              </button>
+            )}
+            <button className="btn-primary" onClick={() => {
+              setShowForm(true);
+              setEditingExpense(null);
+            }}>
+              + Add Expense
             </button>
-          )}
+          </div>
+        )}
+        {isMobile && (
+          <div className="mobile-header-actions">
+            <button 
+              className="btn-icon" 
+              onClick={() => setShowFilters(!showFilters)}
+              aria-label="Toggle filters"
+            >
+              🔍
+            </button>
+            {selectedIds.length > 0 && (
+              <button className="btn-icon btn-danger-icon" onClick={handleDeleteSelected}>
+                🗑️
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isMobile && showFilters && (
+        <div className="mobile-filters-drawer">
+          <ExpenseFilters
+            filters={filters}
+            categories={categories}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+          />
+          <button className="btn-close-filters" onClick={() => setShowFilters(false)}>
+            Close Filters
+          </button>
+        </div>
+      )}
+
+      {!isMobile && (
+        <ExpenseFilters
+          filters={filters}
+          categories={categories}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+        />
+      )}
+
+      {isMobile && selectedIds.length > 0 && (
+        <div className="mobile-bulk-actions">
+          <button className="btn-danger" onClick={handleDeleteSelected}>
+            Delete Selected ({selectedIds.length})
+          </button>
           {expenses.length > 0 && (
             <button className="btn-danger" onClick={handleDeleteAll}>
               Delete All
             </button>
           )}
-          <button className="btn-primary" onClick={() => {
-            setShowForm(true);
-            setEditingExpense(null);
-          }}>
-            + Add Expense
-          </button>
         </div>
-      </div>
-
-      <ExpenseFilters
-        filters={filters}
-        categories={categories}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-      />
+      )}
 
       {showForm && (
         <ExpenseForm
@@ -206,6 +257,17 @@ const Expenses = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onSelectionChange={handleSelectionChange}
+        />
+      )}
+
+      {isMobile && (
+        <FAB
+          onClick={() => {
+            setShowForm(true);
+            setEditingExpense(null);
+          }}
+          icon="+"
+          aria-label="Add expense"
         />
       )}
     </div>

@@ -83,53 +83,10 @@
   border-color: var(--primary-color);
 }
 
+/* Hide navbar on mobile - replaced by BottomNav */
 @media (max-width: 768px) {
-  .navbar-container {
-    padding: 0 1rem;
-    flex-wrap: wrap;
-  }
-
-  .navbar-links {
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    font-size: 0.9rem;
-  }
-
-  .navbar-brand {
-    font-size: 1.1rem;
-  }
-
-  .nav-link {
-    padding: 0.4rem 0.5rem;
-    font-size: 0.9rem;
-  }
-
-  .theme-toggle {
-    font-size: 1.3rem;
-    padding: 0.4rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar-container {
-    padding: 0.75rem 1rem;
-  }
-
-  .navbar-links {
-    gap: 0.5rem;
-    width: 100%;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--border-color);
-  }
-
-  .navbar-brand {
-    font-size: 1rem;
-  }
-
-  .nav-link {
-    font-size: 0.85rem;
-    padding: 0.35rem 0.4rem;
+  .navbar {
+    display: none;
   }
 }
 

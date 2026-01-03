@@ -1,12 +1,13 @@
 .expenses-page {
   animation: fadeIn 0.3s ease-in;
+  padding-bottom: 1rem;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -28,6 +29,7 @@
   font-weight: 500;
   font-size: 1rem;
   transition: background-color 0.2s;
+  min-height: 44px;
 }
 
 .btn-danger:hover {
@@ -37,6 +39,7 @@
 .page-title {
   font-size: 2rem;
   color: var(--text-primary);
+  margin: 0;
 }
 
 .btn-primary {
@@ -49,15 +52,98 @@
   font-weight: 500;
   font-size: 1rem;
   transition: background-color 0.2s;
+  min-height: 44px;
 }
 
 .btn-primary:hover {
   background-color: var(--primary-hover);
 }
 
+/* Mobile-specific styles */
 @media (max-width: 768px) {
   .page-title {
     font-size: 1.5rem;
+    margin-bottom: 0;
+  }
+
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .mobile-header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .btn-icon {
+    background: none;
+    border: 1px solid var(--border-color);
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+
+  .btn-icon:hover {
+    background-color: var(--bg-secondary);
+  }
+
+  .btn-danger-icon {
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+  }
+
+  .mobile-filters-drawer {
+    background-color: var(--bg-card);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+  }
+
+  .btn-close-filters {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    min-height: 44px;
+  }
+
+  .mobile-bulk-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-bulk-actions .btn-danger {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .mobile-bulk-actions {
+    flex-direction: column;
+  }
+
+  .mobile-bulk-actions .btn-danger {
+    width: 100%;
   }
 }
 

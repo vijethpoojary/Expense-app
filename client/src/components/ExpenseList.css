@@ -23,6 +23,7 @@
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
   transition: background-color 0.2s;
+  position: relative;
 }
 
 .expense-item:hover {
@@ -119,72 +120,147 @@
   box-shadow: var(--shadow);
 }
 
-@media (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1024px) {
   .expense-list-header,
   .expense-item {
-    grid-template-columns: 2fr 1fr 1fr 1fr;
+    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr;
   }
 
-  .expense-header-item:nth-child(3),
-  .expense-header-item:nth-child(5),
+  .expense-header-item:nth-child(4),
+  .expense-header-item:nth-child(6),
   .expense-cell.category,
   .expense-cell.date {
     display: none;
   }
 }
 
+/* Mobile card-based layout - Single row design */
 @media (max-width: 768px) {
-  .expense-list-header,
-  .expense-item {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .expense-header-item {
+  .expense-list-header {
     display: none;
   }
 
-  .expense-cell {
+  .expense-list {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 0.5rem;
+    background-color: transparent;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+  }
+
+  .expense-item {
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .expense-item:last-child {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .expense-item:active {
+    transform: scale(0.98);
+  }
+
+  /* All cells should be inline and in one row */
+  .expense-cell {
+    display: inline-flex !important;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    white-space: nowrap;
   }
 
   .expense-cell::before {
-    content: attr(data-label);
+    display: none;
+  }
+
+  /* Checkbox on the left */
+  .expense-cell.checkbox-cell {
+    flex-shrink: 0;
+  }
+
+  .expense-cell.checkbox-cell input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Item name */
+  .expense-cell.item-name {
     font-weight: 600;
-    color: var(--text-secondary);
-    margin-right: 1rem;
-  }
-
-  .expense-item {
-    padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    margin-bottom: 0.875rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .expense-item {
-    padding: 0.875rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .expense-cell {
     font-size: 0.95rem;
-    flex-wrap: wrap;
+    color: var(--text-primary);
   }
 
-  .expense-cell.name {
-    font-weight: 600;
-    width: 100%;
-    margin-bottom: 0.25rem;
+  /* Amount */
+  .expense-cell.amount {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-color);
   }
 
-  .empty-state {
-    padding: 2rem 1rem;
-    font-size: 0.95rem;
+  /* Source badge */
+  .expense-cell.source {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .source-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  /* Hide category and date on mobile */
+  .expense-cell.category,
+  .expense-cell.date {
+    display: none;
+  }
+
+  /* Edit and Delete buttons as direct children */
+  .btn-edit,
+  .btn-delete {
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 1rem;
+    padding: 0.25rem;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .btn-edit:hover {
+    background-color: var(--bg-secondary);
+  }
+
+  .btn-delete:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+
+  .desktop-only {
+    display: none;
   }
 }
 

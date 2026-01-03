@@ -59,7 +59,7 @@ const ExpenseList = ({ expenses, onEdit, onDelete, onSelectionChange }) => {
 
   return (
     <div className="expense-list">
-      <div className="expense-list-header">
+      <div className="expense-list-header desktop-only">
         <div className="expense-header-item checkbox-header">
           <input
             type="checkbox"
@@ -68,6 +68,7 @@ const ExpenseList = ({ expenses, onEdit, onDelete, onSelectionChange }) => {
               if (input) input.indeterminate = isIndeterminate;
             }}
             onChange={handleSelectAll}
+            aria-label="Select all expenses"
           />
         </div>
         <div className="expense-header-item">Item</div>
@@ -84,26 +85,39 @@ const ExpenseList = ({ expenses, onEdit, onDelete, onSelectionChange }) => {
               type="checkbox"
               checked={selectedIds.includes(expense._id)}
               onChange={() => handleSelectOne(expense._id)}
+              aria-label={`Select ${expense.itemName}`}
             />
           </div>
-          <div className="expense-cell item-name">{expense.itemName}</div>
-          <div className="expense-cell amount">{formatCurrency(expense.amount)}</div>
-          <div className="expense-cell category">
-            {expense.category || <span className="no-category">—</span>}
-          </div>
-          <div className="expense-cell source">
+          <span className="expense-cell item-name">
+            {expense.itemName}
+          </span>
+          <span className="expense-cell amount">
+            {formatCurrency(expense.amount)}
+          </span>
+          <button 
+            className="btn-edit expense-cell" 
+            onClick={() => onEdit(expense)}
+            aria-label={`Edit ${expense.itemName}`}
+          >
+            ✏️
+          </button>
+          <button 
+            className="btn-delete expense-cell" 
+            onClick={() => onDelete(expense._id)}
+            aria-label={`Delete ${expense.itemName}`}
+          >
+            🗑️
+          </button>
+          <span className="expense-cell source">
             <span className={`source-badge ${expense.sourceType}`}>
               {expense.sourceType}
             </span>
+          </span>
+          <div className="expense-cell category desktop-only" data-label="Category:">
+            {expense.category || <span className="no-category">—</span>}
           </div>
-          <div className="expense-cell date">{formatDate(expense.date)}</div>
-          <div className="expense-cell actions">
-            <button className="btn-edit" onClick={() => onEdit(expense)}>
-              ✏️
-            </button>
-            <button className="btn-delete" onClick={() => onDelete(expense._id)}>
-              🗑️
-            </button>
+          <div className="expense-cell date desktop-only" data-label="Date:">
+            {formatDate(expense.date)}
           </div>
         </div>
       ))}

@@ -1,6 +1,18 @@
+/* InvestmentForm uses the same form-overlay and form-container classes as ExpenseForm */
+/* Import or share styles from ExpenseForm.css */
+
 .investment-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Ensure form inputs are touch-friendly on mobile */
+@media (max-width: 768px) {
+  .investment-form input,
+  .investment-form select {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
 }
 

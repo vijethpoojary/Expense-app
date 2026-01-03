@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { investmentAPI } from '../services/api';
+import { useIsMobile } from '../hooks/useWindowSize';
 import InvestmentForm from './InvestmentForm';
 import InvestmentList from './InvestmentList';
 import InvestmentFilters from './InvestmentFilters';
+import FAB from './FAB';
 import './Investments.css';
 
 const Investments = () => {
@@ -12,6 +14,8 @@ const Investments = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: '',
@@ -154,32 +158,79 @@ const Investments = () => {
     <div className="investments-page">
       <div className="page-header">
         <h1 className="page-title">Investments</h1>
-        <div className="header-actions">
-          {selectedIds.length > 0 && (
-            <button className="btn-danger" onClick={handleDeleteSelected}>
-              Delete Selected ({selectedIds.length})
+        {!isMobile && (
+          <div className="header-actions">
+            {selectedIds.length > 0 && (
+              <button className="btn-danger" onClick={handleDeleteSelected}>
+                Delete Selected ({selectedIds.length})
+              </button>
+            )}
+            {investments.length > 0 && (
+              <button className="btn-danger" onClick={handleDeleteAll}>
+                Delete All
+              </button>
+            )}
+            <button className="btn-primary" onClick={() => {
+              setShowForm(true);
+              setEditingInvestment(null);
+            }}>
+              + Add Investment
             </button>
-          )}
+          </div>
+        )}
+        {isMobile && (
+          <div className="mobile-header-actions">
+            <button 
+              className="btn-icon" 
+              onClick={() => setShowFilters(!showFilters)}
+              aria-label="Toggle filters"
+            >
+              🔍
+            </button>
+            {selectedIds.length > 0 && (
+              <button className="btn-icon btn-danger-icon" onClick={handleDeleteSelected}>
+                🗑️
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isMobile && showFilters && (
+        <div className="mobile-filters-drawer">
+          <InvestmentFilters
+            filters={filters}
+            investmentTypes={investmentTypes}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
+          />
+          <button className="btn-close-filters" onClick={() => setShowFilters(false)}>
+            Close Filters
+          </button>
+        </div>
+      )}
+
+      {!isMobile && (
+        <InvestmentFilters
+          filters={filters}
+          investmentTypes={investmentTypes}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+        />
+      )}
+
+      {isMobile && selectedIds.length > 0 && (
+        <div className="mobile-bulk-actions">
+          <button className="btn-danger" onClick={handleDeleteSelected}>
+            Delete Selected ({selectedIds.length})
+          </button>
           {investments.length > 0 && (
             <button className="btn-danger" onClick={handleDeleteAll}>
               Delete All
             </button>
           )}
-          <button className="btn-primary" onClick={() => {
-            setShowForm(true);
-            setEditingInvestment(null);
-          }}>
-            + Add Investment
-          </button>
         </div>
-      </div>
-
-      <InvestmentFilters
-        filters={filters}
-        investmentTypes={investmentTypes}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-      />
+      )}
 
       {showForm && (
         <InvestmentForm
@@ -204,6 +255,17 @@ const Investments = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onSelectionChange={handleSelectionChange}
+        />
+      )}
+
+      {isMobile && (
+        <FAB
+          onClick={() => {
+            setShowForm(true);
+            setEditingInvestment(null);
+          }}
+          icon="+"
+          aria-label="Add investment"
         />
       )}
     </div>
