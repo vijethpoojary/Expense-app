@@ -36,7 +36,7 @@ const RoomAnalytics = ({ analytics }) => {
         </div>
         <div className="analytics-card highlight">
           <div className="analytics-card-label">You Owe</div>
-          <div className="analytics-card-value negative">{formatCurrency(analytics.userOwed)}</div>
+          <div className="analytics-card-value negative">{formatCurrency(analytics.userOwed || 0)}</div>
         </div>
       </div>
     </div>

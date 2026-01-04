@@ -47,6 +47,14 @@
   color: #ef4444;
 }
 
+.analytics-card.net-balance {
+  border-left-color: #f59e0b;
+}
+
+.analytics-card-value.positive {
+  color: #10b981;
+}
+
 @media (max-width: 768px) {
   .analytics-grid {
     grid-template-columns: 1fr;
