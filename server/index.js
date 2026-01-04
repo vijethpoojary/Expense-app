@@ -39,6 +39,8 @@ app.use('/api/expenses', authenticate, require('./routes/expenseRoutes'));
 app.use('/api/salary', authenticate, require('./routes/salaryRoutes'));
 app.use('/api/investments', authenticate, require('./routes/investmentRoutes'));
 app.use('/api/analytics', authenticate, require('./routes/analyticsRoutes'));
+app.use('/api/rooms', authenticate, require('./routes/roomRoutes'));
+app.use('/api/room-expenses', authenticate, require('./routes/roomExpenseRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

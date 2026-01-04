@@ -1,0 +1,136 @@
+.rooms-container {
+  animation: fadeIn 0.3s ease-in;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.rooms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.rooms-title {
+  font-size: 2rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.btn-create-room {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.btn-create-room:hover {
+  background-color: var(--primary-hover);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.room-card {
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-left: 4px solid var(--primary-color);
+}
+
+.room-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
+
+.room-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.room-card-name {
+  font-size: 1.25rem;
+  margin: 0;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.room-creator-badge {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.room-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.room-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.room-info-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.room-info-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.create-room-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .rooms-container {
+    padding: 1rem;
+  }
+
+  .rooms-title {
+    font-size: 1.5rem;
+  }
+
+  .rooms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .room-card {
+    padding: 1.25rem;
+  }
+}
+

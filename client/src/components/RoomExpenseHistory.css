@@ -1,0 +1,290 @@
+.room-expense-history {
+  /* Styles moved to parent room-detail-section */
+}
+
+.expense-filters {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: var(--bg-primary);
+  border-radius: 6px;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.btn-clear-filters {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+  min-height: 44px;
+}
+
+.btn-clear-filters:hover {
+  background-color: var(--border-color);
+}
+
+.expenses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.expense-card {
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.expense-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.expense-main-info {
+  flex: 1;
+}
+
+.expense-description {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+}
+
+.expense-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.expense-date {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.expense-category {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.expense-amount-info {
+  text-align: right;
+}
+
+.expense-total {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.expense-paid-by {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.expense-split-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+}
+
+.split-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+}
+
+.split-details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.split-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: var(--bg-card);
+  border-radius: 6px;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.split-member-info {
+  flex: 1;
+}
+
+.split-member-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex-wrap: wrap;
+}
+
+.split-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.split-badge.you {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.split-badge.payer {
+  background-color: #10b981;
+  color: white;
+}
+
+.split-amount-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.split-status {
+  font-weight: 600;
+  min-width: 120px;
+  text-align: right;
+}
+
+.split-status.paid {
+  color: #10b981;
+}
+
+.split-status.pending {
+  color: #ef4444;
+}
+
+.btn-status-toggle {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-status-toggle.paid {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.btn-status-toggle.paid:hover:not(:disabled) {
+  background-color: #fde68a;
+}
+
+.btn-status-toggle.pending {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.btn-status-toggle.pending:hover:not(:disabled) {
+  background-color: #fecaca;
+}
+
+.btn-status-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .room-expense-history {
+    padding: 1rem;
+  }
+
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-header {
+    flex-direction: column;
+  }
+
+  .expense-amount-info {
+    text-align: left;
+    width: 100%;
+  }
+
+  .split-detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .split-amount-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .split-status {
+    text-align: left;
+  }
+
+  .btn-status-toggle {
+    width: 100%;
+  }
+}
+

@@ -65,5 +65,23 @@ export const analyticsAPI = {
   getMonthlySummary: (year, month) => api.get('/analytics/monthly', { params: { year, month } }),
 };
 
+// Room APIs
+export const roomAPI = {
+  create: (data) => api.post('/rooms', data),
+  getAll: () => api.get('/rooms'),
+  getById: (id) => api.get(`/rooms/${id}`),
+  addMember: (roomId, data) => api.post(`/rooms/${roomId}/members`, data),
+  removeMember: (roomId, data) => api.delete(`/rooms/${roomId}/members`, { data }),
+  delete: (id) => api.delete(`/rooms/${id}`),
+};
+
+// Room Expense APIs
+export const roomExpenseAPI = {
+  create: (data) => api.post('/room-expenses', data),
+  getByRoom: (roomId, filters = {}) => api.get(`/room-expenses/${roomId}`, { params: filters }),
+  getAnalytics: (roomId) => api.get(`/room-expenses/${roomId}/analytics`),
+  updatePaymentStatus: (expenseId, memberUserId, status) => api.put(`/room-expenses/${expenseId}/status`, { memberUserId, status }),
+};
+
 export default api;
 

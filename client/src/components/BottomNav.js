@@ -5,14 +5,19 @@ import './BottomNav.css';
 const BottomNav = () => {
   const location = useLocation();
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path === '/rooms') {
+      return location.pathname === '/rooms' || location.pathname.startsWith('/rooms/');
+    }
+    return location.pathname === path;
+  };
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/expenses', label: 'Expenses', icon: '💸' },
     { path: '/investments', label: 'Investments', icon: '📈' },
+    { path: '/rooms', label: 'Rooms', icon: '🏠' },
     { path: '/summary', label: 'Summary', icon: '📋' },
-    { path: '/history', label: 'History', icon: '📜' },
   ];
 
   return (

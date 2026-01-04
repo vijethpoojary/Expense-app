@@ -12,6 +12,8 @@ import Expenses from './components/Expenses';
 import Investments from './components/Investments';
 import MonthlySummary from './components/MonthlySummary';
 import ExpensesHistory from './components/ExpensesHistory';
+import Rooms from './components/Rooms';
+import RoomDetail from './components/RoomDetail';
 
 function AppContent() {
   const [theme, setTheme] = useState(() => {
@@ -90,6 +92,22 @@ function AppContent() {
               element={
                 <PrivateRoute>
                   <ExpensesHistory />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/rooms"
+              element={
+                <PrivateRoute>
+                  <Rooms />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/rooms/:id"
+              element={
+                <PrivateRoute>
+                  <RoomDetail />
                 </PrivateRoute>
               }
             />
