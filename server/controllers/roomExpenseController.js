@@ -78,6 +78,7 @@ exports.createRoomExpense = async (req, res, next) => {
     const splitDetails = room.members.map(member => ({
       userId: member.userId,
       shareAmount: member.userId.toString() === userId ? 0 : shareAmount,
+      paidAmount: 0,
       status: member.userId.toString() === userId ? 'paid' : 'pending'
     }));
 
@@ -235,9 +236,102 @@ exports.updatePaymentStatus = async (req, res, next) => {
     }
 
     splitDetail.status = status;
+    // If marking as paid, set paidAmount to shareAmount
+    if (status === 'paid') {
+      splitDetail.paidAmount = splitDetail.shareAmount;
+    } else {
+      // If marking as pending, reset paidAmount to 0
+      splitDetail.paidAmount = 0;
+    }
     await expense.save();
 
     res.json(expense);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update partial payment amount for a split detail
+// SECURITY: Only expense creator (paidBy) can update payment amount
+exports.updatePartialPayment = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const expenseId = req.params.id;
+    const { memberUserId, paidAmount } = req.body;
+
+    const amount = parseFloat(paidAmount);
+    if (isNaN(amount) || amount < 0) {
+      return res.status(400).json({ message: 'Paid amount must be a valid positive number' });
+    }
+
+    // Find expense and verify user is the creator (paidBy)
+    const expense = await RoomExpense.findById(expenseId);
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    if (expense.paidBy.toString() !== userId) {
+      return res.status(403).json({ message: 'Only expense creator can update payment amount' });
+    }
+
+    // Prevent updating payer's amount
+    if (memberUserId === userId) {
+      return res.status(400).json({ message: 'Cannot update payment amount for expense creator' });
+    }
+
+    // Update the split detail
+    const splitDetail = expense.splitDetails.find(
+      split => split.userId.toString() === memberUserId
+    );
+
+    if (!splitDetail) {
+      return res.status(404).json({ message: 'Member not found in split details' });
+    }
+
+    // Ensure paidAmount doesn't exceed shareAmount
+    const finalPaidAmount = Math.min(amount, splitDetail.shareAmount);
+    splitDetail.paidAmount = finalPaidAmount;
+    
+    // Update status based on paidAmount
+    if (finalPaidAmount >= splitDetail.shareAmount) {
+      splitDetail.status = 'paid';
+      splitDetail.paidAmount = splitDetail.shareAmount; // Ensure exact match
+    } else if (finalPaidAmount > 0) {
+      splitDetail.status = 'pending'; // Partial payment, still pending
+    } else {
+      splitDetail.status = 'pending'; // No payment, pending
+    }
+    
+    await expense.save();
+
+    res.json(expense);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete room expense
+// SECURITY: Only expense creator (paidBy) can delete expense
+exports.deleteRoomExpense = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const expenseId = req.params.id;
+
+    // Find expense and verify user is the creator (paidBy)
+    const expense = await RoomExpense.findById(expenseId);
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' });
+    }
+
+    if (expense.paidBy.toString() !== userId) {
+      return res.status(403).json({ message: 'Only expense creator can delete this expense' });
+    }
+
+    await RoomExpense.findByIdAndDelete(expenseId);
+
+    res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
     next(error);
   }
@@ -302,31 +396,47 @@ exports.getRoomAnalytics = async (req, res, next) => {
       }
     });
 
-    // Calculate user's paid vs owed amounts
+    // Calculate user's paid vs owed amounts with net balance logic
     let userPaid = 0;
     let userOwed = 0;
+    let othersOweUser = 0;
 
     allExpenses.forEach(expense => {
       if (expense.paidBy.toString() === userId.toString()) {
-        // User paid this expense
+        // User paid this expense - reduce their pending by full amount paid
         userPaid += expense.totalAmount;
-      }
-      
-      // Check user's share
-      const userSplit = expense.splitDetails.find(
-        split => split.userId.toString() === userId.toString()
-      );
-      if (userSplit && userSplit.status === 'pending') {
-        userOwed += userSplit.shareAmount;
+        userOwed -= expense.totalAmount; // Reduce pending when you pay for expense
+        
+        // Calculate how much others owe user from this expense
+        expense.splitDetails.forEach(split => {
+          if (split.userId.toString() !== userId.toString()) {
+            const paidAmount = split.paidAmount || 0;
+            othersOweUser += (split.shareAmount - paidAmount);
+          }
+        });
+      } else {
+        // User didn't pay this expense - check their share
+        const userSplit = expense.splitDetails.find(
+          split => split.userId.toString() === userId.toString()
+        );
+        if (userSplit && userSplit.status === 'pending') {
+          const paidAmount = userSplit.paidAmount || 0;
+          userOwed += (userSplit.shareAmount - paidAmount);
+        }
       }
     });
+
+    // Net balance: what user owes minus what others owe user
+    const netBalance = userOwed - othersOweUser;
 
     res.json({
       today: todayTotal,
       week: weekTotal,
       month: monthTotal,
       userPaid,
-      userOwed
+      userOwed: userOwed > 0 ? userOwed : 0, // Show positive pending amount
+      othersOweUser,
+      netBalance // Positive = user owes, Negative = others owe user
     });
   } catch (error) {
     next(error);

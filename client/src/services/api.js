@@ -81,6 +81,8 @@ export const roomExpenseAPI = {
   getByRoom: (roomId, filters = {}) => api.get(`/room-expenses/${roomId}`, { params: filters }),
   getAnalytics: (roomId) => api.get(`/room-expenses/${roomId}/analytics`),
   updatePaymentStatus: (expenseId, memberUserId, status) => api.put(`/room-expenses/${expenseId}/status`, { memberUserId, status }),
+  updatePartialPayment: (expenseId, memberUserId, paidAmount) => api.put(`/room-expenses/${expenseId}/partial-payment`, { memberUserId, paidAmount }),
+  delete: (expenseId) => api.delete(`/room-expenses/${expenseId}`),
 };
 
 export default api;

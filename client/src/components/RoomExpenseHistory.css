@@ -128,6 +128,24 @@
 .expense-paid-by {
   color: var(--text-secondary);
   font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-delete-expense {
+  background-color: var(--danger-color, #ef4444);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  margin-top: 0.5rem;
+}
+
+.btn-delete-expense:hover {
+  background-color: #dc2626;
 }
 
 .expense-split-section {
@@ -194,6 +212,102 @@
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.payment-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.partial-payment-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.partial-payment-input {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  width: 120px;
+  min-height: 36px;
+}
+
+.partial-payment-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.btn-partial-payment {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.btn-partial-payment:hover:not(:disabled) {
+  background-color: #bfdbfe;
+}
+
+.btn-partial-payment:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-save-partial {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-save-partial:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-save-partial:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cancel-partial {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.btn-cancel-partial:hover:not(:disabled) {
+  background-color: var(--border-color);
+}
+
+.btn-cancel-partial:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .split-status {

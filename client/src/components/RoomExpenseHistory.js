@@ -10,6 +10,8 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
     paymentStatus: ''
   });
   const [updatingStatus, setUpdatingStatus] = useState({});
+  const [editingPartialPayment, setEditingPartialPayment] = useState({});
+  const [partialPaymentAmounts, setPartialPaymentAmounts] = useState({});
 
   const categories = useMemo(() => {
     const cats = new Set();
@@ -68,6 +70,86 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
         delete newState[`${expenseId}-${memberUserId}`];
         return newState;
       });
+    }
+  };
+
+  const handlePartialPaymentChange = (expenseId, memberUserId, amount) => {
+    setPartialPaymentAmounts(prev => ({
+      ...prev,
+      [`${expenseId}-${memberUserId}`]: amount
+    }));
+  };
+
+  const handleSavePartialPayment = async (expenseId, memberUserId) => {
+    const key = `${expenseId}-${memberUserId}`;
+    const amount = partialPaymentAmounts[key];
+    
+    if (amount === undefined || amount === '') {
+      alert('Please enter an amount');
+      return;
+    }
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount < 0) {
+      alert('Please enter a valid positive number');
+      return;
+    }
+
+    try {
+      setUpdatingStatus(prev => ({ ...prev, [key]: true }));
+      await roomExpenseAPI.updatePartialPayment(expenseId, memberUserId, numAmount);
+      setEditingPartialPayment(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+      setPartialPaymentAmounts(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+      if (onUpdateStatus) {
+        onUpdateStatus();
+      }
+    } catch (error) {
+      console.error('Error updating partial payment:', error);
+      alert(error.response?.data?.message || 'Failed to update payment amount');
+    } finally {
+      setUpdatingStatus(prev => {
+        const newState = { ...prev };
+        delete newState[key];
+        return newState;
+      });
+    }
+  };
+
+  const handleCancelPartialPayment = (expenseId, memberUserId) => {
+    const key = `${expenseId}-${memberUserId}`;
+    setEditingPartialPayment(prev => {
+      const newState = { ...prev };
+      delete newState[key];
+      return newState;
+    });
+    setPartialPaymentAmounts(prev => {
+      const newState = { ...prev };
+      delete newState[key];
+      return newState;
+    });
+  };
+
+  const handleDeleteExpense = async (expenseId) => {
+    if (!window.confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await roomExpenseAPI.delete(expenseId);
+      if (onUpdateStatus) {
+        onUpdateStatus();
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      alert(error.response?.data?.message || 'Failed to delete expense');
     }
   };
 
@@ -198,6 +280,15 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                     <div className="expense-paid-by">
                       Paid by: {expense.paidBy?.email || 'Unknown'}
                     </div>
+                    {creator && (
+                      <button
+                        className="btn-delete-expense"
+                        onClick={() => handleDeleteExpense(expense._id)}
+                        title="Delete expense"
+                      >
+                        🗑️ Delete
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -221,22 +312,97 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                             </span>
                           </div>
                           <div className="split-amount-info">
-                            <span className={`split-status ${split.status}`}>
-                              {isPayer ? `Paid - ${formatCurrency(0)}` : `${split.status === 'paid' ? 'Paid' : 'Pending'} - ${formatCurrency(split.shareAmount)}`}
-                            </span>
-                            {creator && !isPayer && (
-                              <button
-                                className={`btn-status-toggle ${split.status}`}
-                                onClick={() => handleUpdateStatus(
-                                  expense._id,
-                                  split.userId?.toString() || split.userId,
-                                  split.status === 'paid' ? 'pending' : 'paid'
-                                )}
-                                disabled={isUpdating}
-                              >
-                                {isUpdating ? '...' : split.status === 'paid' ? 'Mark Pending' : 'Mark Paid'}
-                              </button>
-                            )}
+                            {(() => {
+                              const key = `${expense._id}-${split.userId?.toString() || split.userId}`;
+                              const isEditing = editingPartialPayment[key];
+                              const paidAmount = split.paidAmount || 0;
+                              const remainingAmount = split.shareAmount - paidAmount;
+                              const isUpdating = updatingStatus[key];
+
+                              if (isPayer) {
+                                return (
+                                  <span className={`split-status ${split.status}`}>
+                                    Paid - {formatCurrency(0)}
+                                  </span>
+                                );
+                              }
+
+                              if (isEditing) {
+                                return (
+                                  <div className="partial-payment-input-group">
+                                    <input
+                                      type="number"
+                                      className="partial-payment-input"
+                                      placeholder="Enter amount"
+                                      value={partialPaymentAmounts[key] !== undefined ? partialPaymentAmounts[key] : paidAmount}
+                                      onChange={(e) => handlePartialPaymentChange(expense._id, split.userId?.toString() || split.userId, e.target.value)}
+                                      min="0"
+                                      max={split.shareAmount}
+                                      step="0.01"
+                                      autoFocus
+                                    />
+                                    <button
+                                      className="btn-save-partial"
+                                      onClick={() => handleSavePartialPayment(expense._id, split.userId?.toString() || split.userId)}
+                                      disabled={isUpdating}
+                                    >
+                                      {isUpdating ? '...' : 'Save'}
+                                    </button>
+                                    <button
+                                      className="btn-cancel-partial"
+                                      onClick={() => handleCancelPartialPayment(expense._id, split.userId?.toString() || split.userId)}
+                                      disabled={isUpdating}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <>
+                                  <span className={`split-status ${split.status}`}>
+                                    {remainingAmount <= 0 
+                                      ? `Paid - ${formatCurrency(split.shareAmount)}`
+                                      : paidAmount > 0
+                                      ? `Pending - ${formatCurrency(remainingAmount)} (Paid: ${formatCurrency(paidAmount)})`
+                                      : `Pending - ${formatCurrency(remainingAmount)}`
+                                    }
+                                  </span>
+                                  {creator && !isPayer && (
+                                    <div className="payment-action-buttons">
+                                      <button
+                                        className="btn-partial-payment"
+                                        onClick={() => {
+                                          setEditingPartialPayment(prev => ({
+                                            ...prev,
+                                            [key]: true
+                                          }));
+                                          setPartialPaymentAmounts(prev => ({
+                                            ...prev,
+                                            [key]: paidAmount
+                                          }));
+                                        }}
+                                        disabled={isUpdating}
+                                      >
+                                        Add Payment
+                                      </button>
+                                      <button
+                                        className={`btn-status-toggle ${split.status}`}
+                                        onClick={() => handleUpdateStatus(
+                                          expense._id,
+                                          split.userId?.toString() || split.userId,
+                                          split.status === 'paid' ? 'pending' : 'paid'
+                                        )}
+                                        disabled={isUpdating}
+                                      >
+                                        {isUpdating ? '...' : split.status === 'paid' ? 'Mark Pending' : 'Mark Paid'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       );

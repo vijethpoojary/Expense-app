@@ -14,6 +14,8 @@ router.post('/', createExpenseValidation, roomExpenseController.createRoomExpens
 router.get('/:roomId/analytics', roomExpenseController.getRoomAnalytics);
 router.get('/:roomId', roomExpenseController.getRoomExpenses);
 router.put('/:id/status', roomExpenseController.updatePaymentStatus);
+router.put('/:id/partial-payment', roomExpenseController.updatePartialPayment);
+router.delete('/:id', roomExpenseController.deleteRoomExpense);
 
 module.exports = router;
 
