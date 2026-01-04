@@ -38,17 +38,6 @@ const RoomAnalytics = ({ analytics }) => {
           <div className="analytics-card-label">You Owe</div>
           <div className="analytics-card-value negative">{formatCurrency(analytics.userOwed || 0)}</div>
         </div>
-        {analytics.netBalance !== undefined && (
-          <div className="analytics-card highlight net-balance">
-            <div className="analytics-card-label">Net Balance</div>
-            <div className={`analytics-card-value ${analytics.netBalance >= 0 ? 'negative' : 'positive'}`}>
-              {analytics.netBalance >= 0 
-                ? `You Owe: ${formatCurrency(analytics.netBalance)}`
-                : `You're Owed: ${formatCurrency(Math.abs(analytics.netBalance))}`
-              }
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

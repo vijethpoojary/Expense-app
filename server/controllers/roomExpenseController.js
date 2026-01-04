@@ -371,10 +371,15 @@ exports.getRoomAnalytics = async (req, res, next) => {
     const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
     const endOfMonth = new Date(lastDay.getTime() - (IST_OFFSET * 60 * 1000));
 
-    // Get all expenses for the room
-    const allExpenses = await RoomExpense.find({
+    // Get all expenses for the room (for totals - only current month)
+    const monthExpenses = await RoomExpense.find({
       roomId,
       date: { $gte: startOfMonth }
+    });
+    
+    // Get ALL expenses for the room (for balance calculation)
+    const allExpenses = await RoomExpense.find({
+      roomId
     });
 
     // Calculate totals
@@ -382,7 +387,7 @@ exports.getRoomAnalytics = async (req, res, next) => {
     let weekTotal = 0;
     let monthTotal = 0;
 
-    allExpenses.forEach(expense => {
+    monthExpenses.forEach(expense => {
       const expenseDate = new Date(expense.date.getTime() + (IST_OFFSET * 60 * 1000));
       
       if (expense.date >= startOfToday && expense.date <= endOfToday) {
@@ -396,22 +401,26 @@ exports.getRoomAnalytics = async (req, res, next) => {
       }
     });
 
-    // Calculate user's paid vs owed amounts with net balance logic
+    // Calculate user's paid vs owed amounts with new net balance logic
+    // If what_they_owe >= what_they_are_owed: show (what_they_owe - what_they_are_owed)
+    // If what_they_owe < what_they_are_owed: show what_they_owe
     let userPaid = 0;
-    let userOwed = 0;
-    let othersOweUser = 0;
+    let amountOwed = 0; // What user owes to others
+    let amountOwedToUser = 0; // What others owe to user
 
     allExpenses.forEach(expense => {
-      if (expense.paidBy.toString() === userId.toString()) {
-        // User paid this expense - reduce their pending by full amount paid
+      const paidByUserId = expense.paidBy.toString();
+      
+      if (paidByUserId === userId.toString()) {
+        // User paid this expense
         userPaid += expense.totalAmount;
-        userOwed -= expense.totalAmount; // Reduce pending when you pay for expense
         
         // Calculate how much others owe user from this expense
         expense.splitDetails.forEach(split => {
           if (split.userId.toString() !== userId.toString()) {
             const paidAmount = split.paidAmount || 0;
-            othersOweUser += (split.shareAmount - paidAmount);
+            const remainingAmount = split.shareAmount - paidAmount;
+            amountOwedToUser += remainingAmount;
           }
         });
       } else {
@@ -419,23 +428,34 @@ exports.getRoomAnalytics = async (req, res, next) => {
         const userSplit = expense.splitDetails.find(
           split => split.userId.toString() === userId.toString()
         );
-        if (userSplit && userSplit.status === 'pending') {
+        if (userSplit) {
           const paidAmount = userSplit.paidAmount || 0;
-          userOwed += (userSplit.shareAmount - paidAmount);
+          const remainingAmount = userSplit.shareAmount - paidAmount;
+          amountOwed += remainingAmount;
         }
       }
     });
 
+    // Calculate display balance using same logic as frontend
+    // If what they owe >= what they're owed: show net
+    // If what they owe < what they're owed: show what they owe
+    let userOwed;
+    if (amountOwed >= amountOwedToUser) {
+      userOwed = amountOwed - amountOwedToUser;
+    } else {
+      userOwed = amountOwed;
+    }
+
     // Net balance: what user owes minus what others owe user
-    const netBalance = userOwed - othersOweUser;
+    const netBalance = amountOwed - amountOwedToUser;
 
     res.json({
       today: todayTotal,
       week: weekTotal,
       month: monthTotal,
       userPaid,
-      userOwed: userOwed > 0 ? userOwed : 0, // Show positive pending amount
-      othersOweUser,
+      userOwed: userOwed > 0 ? userOwed : 0, // Show pending amount
+      othersOweUser: amountOwedToUser,
       netBalance // Positive = user owes, Negative = others owe user
     });
   } catch (error) {
