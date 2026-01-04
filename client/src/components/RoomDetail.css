@@ -159,6 +159,10 @@
 @media (max-width: 768px) {
   .room-detail-container {
     padding: 1rem;
+    padding-bottom: 6rem; /* Extra space for FAB on mobile */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    min-height: 100vh;
+    box-sizing: border-box;
   }
 
   .room-detail-title {
@@ -167,6 +171,15 @@
 
   .section-title {
     font-size: 1.25rem;
+  }
+
+  .room-detail-section {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    display: block;
+    overflow: visible;
   }
 
   .member-card {

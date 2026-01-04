@@ -51,6 +51,22 @@ const Rooms = () => {
     }
   };
 
+  const handleDeleteRoom = async (e, roomId, roomName) => {
+    e.stopPropagation(); // Prevent card click navigation
+    
+    if (!window.confirm(`Are you sure you want to delete "${roomName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await roomAPI.delete(roomId);
+      fetchRooms(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      alert(error.response?.data?.message || 'Failed to delete room');
+    }
+  };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -126,10 +142,21 @@ const Rooms = () => {
             >
               <div className="room-card-header">
                 <h3 className="room-card-name">{room.name}</h3>
-                {(room.createdBy?._id?.toString() === user?.id?.toString() || 
-                  room.createdBy?.toString() === user?.id?.toString()) && (
-                  <span className="room-creator-badge">Creator</span>
-                )}
+                <div className="room-card-actions">
+                  {(room.createdBy?._id?.toString() === user?.id?.toString() || 
+                    room.createdBy?.toString() === user?.id?.toString()) && (
+                    <>
+                      <span className="room-creator-badge">Creator</span>
+                      <button
+                        className="btn-delete-room"
+                        onClick={(e) => handleDeleteRoom(e, room._id, room.name)}
+                        title="Delete room"
+                      >
+                        🗑️
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="room-card-info">
                 <div className="room-info-item">
