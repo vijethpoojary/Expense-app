@@ -8,7 +8,12 @@ const Navbar = ({ theme, toggleTheme }) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path === '/rooms') {
+      return location.pathname === '/rooms' || location.pathname.startsWith('/rooms/');
+    }
+    return location.pathname === path;
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -36,6 +41,9 @@ const Navbar = ({ theme, toggleTheme }) => {
           </Link>
           <Link to="/history" className={`nav-link ${isActive('/history') ? 'active' : ''}`}>
             History
+          </Link>
+          <Link to="/rooms" className={`nav-link ${isActive('/rooms') ? 'active' : ''}`}>
+            Rooms
           </Link>
           <span className="user-email">{user?.email}</span>
           <button className="logout-btn" onClick={handleLogout} title="Logout">
