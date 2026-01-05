@@ -17,10 +17,7 @@ const SalaryCard = ({ salaryStats }) => {
       </div>
 
       <div className="salary-stats">
-        <div className="salary-stat-item">
-          <span className="salary-label">Monthly Salary</span>
-          <span className="salary-value primary">{formatCurrency(salaryStats?.monthlySalaryDisplay || salaryStats?.monthlySalary || 0)}</span>
-        </div>
+      
         <div className="salary-stat-item">
           <span className="salary-label">Remaining This Month</span>
           <span className="salary-value success">{formatCurrency(salaryStats?.remaining || 0)}</span>
