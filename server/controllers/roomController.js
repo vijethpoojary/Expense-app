@@ -13,7 +13,7 @@ exports.createRoom = async (req, res, next) => {
     }
 
     const { name } = req.body;
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     
     // Get user info for adding as first member
     const user = await User.findById(userId);
@@ -96,7 +96,7 @@ exports.addMember = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     const roomId = req.params.id;
     const { email, name } = req.body;
 
@@ -146,7 +146,7 @@ exports.addMember = async (req, res, next) => {
 // SECURITY: Only room creator can remove members
 exports.removeMember = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     const roomId = req.params.id;
     const { memberId } = req.body;
 
@@ -162,7 +162,7 @@ exports.removeMember = async (req, res, next) => {
     }
 
     // Prevent removing the creator
-    if (memberId === userId) {
+    if (memberId.toString() === userId.toString()) {
       return res.status(400).json({ message: 'Cannot remove room creator' });
     }
 
@@ -183,7 +183,7 @@ exports.removeMember = async (req, res, next) => {
 // SECURITY: Only room creator can delete room
 exports.deleteRoom = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = new mongoose.Types.ObjectId(req.user.id);
     const roomId = req.params.id;
 
     const room = await Room.findOneAndUpdate(
