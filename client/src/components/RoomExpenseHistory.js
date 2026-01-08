@@ -80,24 +80,27 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
     }));
   };
 
-  const handleSavePartialPayment = async (expenseId, memberUserId) => {
+  const handleSavePartialPayment = async (expenseId, memberUserId, currentPaidAmount) => {
     const key = `${expenseId}-${memberUserId}`;
-    const amount = partialPaymentAmounts[key];
+    const remainingAmount = partialPaymentAmounts[key];
     
-    if (amount === undefined || amount === '') {
+    if (remainingAmount === undefined || remainingAmount === '') {
       alert('Please enter an amount');
       return;
     }
 
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount < 0) {
+    const numRemaining = parseFloat(remainingAmount);
+    if (isNaN(numRemaining) || numRemaining < 0) {
       alert('Please enter a valid positive number');
       return;
     }
 
     try {
       setUpdatingStatus(prev => ({ ...prev, [key]: true }));
-      await roomExpenseAPI.updatePartialPayment(expenseId, memberUserId, numAmount);
+      // Calculate new shareAmount = paidAmount + remainingAmount
+      // This allows editing the remaining amount while keeping paidAmount the same
+      const newShareAmount = (currentPaidAmount || 0) + numRemaining;
+      await roomExpenseAPI.updatePartialPayment(expenseId, memberUserId, null, newShareAmount);
       setEditingPartialPayment(prev => {
         const newState = { ...prev };
         delete newState[key];
@@ -187,59 +190,13 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
     );
   };
 
-  // Calculate net balance for each member across all expenses
-  // If what_they_owe >= what_they_are_owed: show (what_they_owe - what_they_are_owed)
-  // If what_they_owe < what_they_are_owed: show what_they_owe
-  const calculateNetBalance = useMemo(() => {
-    const amountOwed = {}; // What each person owes to others
-    const amountOwedToThem = {}; // What others owe to each person
-    
-    // Initialize balances for all members
-    room.members?.forEach(member => {
-      const userId = member.userId?.toString();
-      amountOwed[userId] = 0;
-      amountOwedToThem[userId] = 0;
-    });
-
-    // Calculate balances for each member
-    expenses.forEach(expense => {
-      const paidByUserId = expense.paidBy?._id?.toString() || expense.paidBy?.toString();
-      
-      expense.splitDetails?.forEach(split => {
-        const splitUserId = split.userId?.toString() || split.userId;
-        const paidAmount = split.paidAmount || 0;
-        const remainingAmount = split.shareAmount - paidAmount;
-        
-        if (splitUserId === paidByUserId) {
-          // This is the payer - they don't owe anything for this expense
-          // But others owe them money
-        } else {
-          // This person owes money to the payer
-          amountOwed[splitUserId] = (amountOwed[splitUserId] || 0) + remainingAmount;
-          // The payer is owed this amount
-          amountOwedToThem[paidByUserId] = (amountOwedToThem[paidByUserId] || 0) + remainingAmount;
-        }
-      });
-    });
-    
-    // Calculate final display balance
-    const displayBalances = {};
-    room.members?.forEach(member => {
-      const userId = member.userId?.toString();
-      const owed = amountOwed[userId] || 0;
-      const owedToThem = amountOwedToThem[userId] || 0;
-      
-      // If what they owe >= what they're owed: show net
-      // If what they owe < what they're owed: show what they owe
-      if (owed >= owedToThem) {
-        displayBalances[userId] = owed - owedToThem;
-      } else {
-        displayBalances[userId] = owed;
-      }
-    });
-    
-    return displayBalances;
-  }, [expenses, room.members]);
+  // Get payer info for an expense
+  const getPayerInfo = (expense) => {
+    const paidByUserId = expense.paidBy?._id?.toString() || expense.paidBy?.toString();
+    return room.members?.find(
+      member => member.userId?.toString() === paidByUserId
+    );
+  };
 
   const handleFilterChange = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -372,8 +329,6 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                               const paidAmount = split.paidAmount || 0;
                               const remainingAmount = split.shareAmount - paidAmount;
                               const isUpdating = updatingStatus[key];
-                              const splitUserId = split.userId?.toString() || split.userId;
-                              const netBalance = calculateNetBalance[splitUserId] || 0;
 
                               if (isEditing) {
                                 return (
@@ -381,17 +336,16 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                                     <input
                                       type="number"
                                       className="partial-payment-input"
-                                      placeholder="Enter amount"
-                                      value={partialPaymentAmounts[key] !== undefined ? partialPaymentAmounts[key] : paidAmount}
+                                      placeholder="Enter remaining amount"
+                                      value={partialPaymentAmounts[key] !== undefined ? partialPaymentAmounts[key] : remainingAmount}
                                       onChange={(e) => handlePartialPaymentChange(expense._id, split.userId?.toString() || split.userId, e.target.value)}
                                       min="0"
-                                      max={split.shareAmount}
                                       step="0.01"
                                       autoFocus
                                     />
                                     <button
                                       className="btn-save-partial"
-                                      onClick={() => handleSavePartialPayment(expense._id, split.userId?.toString() || split.userId)}
+                                      onClick={() => handleSavePartialPayment(expense._id, split.userId?.toString() || split.userId, split.paidAmount || 0)}
                                       disabled={isUpdating}
                                     >
                                       {isUpdating ? '...' : 'Save'}
@@ -407,16 +361,25 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                                 );
                               }
 
-                              // Display net balance
-                              // netBalance is already max(0, what_they_owe - what_they_are_owed)
+                              // Display isolated expense - show amount owed to payer
+                              const payerInfo = getPayerInfo(expense);
+                              
                               return (
                                 <>
-                                  <span className={`split-status ${netBalance > 0 ? 'pending' : 'paid'}`}>
-                                    {netBalance > 0 
-                                      ? `Pending - ${formatCurrency(netBalance)}`
-                                      : `Paid - ${formatCurrency(0)}`
-                                    }
-                                  </span>
+                                  <div className="split-amount-display">
+                                    {isPayer ? (
+                                      <span className="split-status paid">
+                                        ₹0 (Paid)
+                                      </span>
+                                    ) : (
+                                      <span className={`split-status ${remainingAmount > 0 ? 'pending' : 'paid'}`}>
+                                        {remainingAmount > 0 
+                                          ? `₹${remainingAmount.toFixed(2)} (to ${payerInfo?.name || 'Unknown'})`
+                                          : `₹0 (Paid)`
+                                        }
+                                      </span>
+                                    )}
+                                  </div>
                                   {creator && !isPayer && (
                                     <div className="payment-action-buttons">
                                       <button
@@ -428,12 +391,12 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                                           }));
                                           setPartialPaymentAmounts(prev => ({
                                             ...prev,
-                                            [key]: paidAmount
+                                            [key]: remainingAmount
                                           }));
                                         }}
                                         disabled={isUpdating}
                                       >
-                                        Add Payment
+                                        Edit Amount
                                       </button>
                                       <button
                                         className={`btn-status-toggle ${split.status}`}
@@ -444,7 +407,7 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                                         )}
                                         disabled={isUpdating}
                                       >
-                                        {isUpdating ? '...' : split.status === 'paid' ? 'Mark Pending' : 'Mark Paid'}
+                                        {isUpdating ? '...' : split.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid'}
                                       </button>
                                     </div>
                                   )}

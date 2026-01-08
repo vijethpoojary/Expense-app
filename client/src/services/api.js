@@ -10,6 +10,72 @@ const api = axios.create({
   withCredentials: true, // CRITICAL: Send cookies with every request
 });
 
+// CSRF token management
+let csrfToken = null;
+
+// Fetch CSRF token from server
+export const fetchCsrfToken = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/csrf-token`, {
+      withCredentials: true
+    });
+    csrfToken = response.data.csrfToken;
+    return csrfToken;
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+    return null;
+  }
+};
+
+// Request interceptor to add CSRF token to state-changing requests
+api.interceptors.request.use(
+  async (config) => {
+    // Only add CSRF token to state-changing methods
+    const stateChangingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    
+    if (stateChangingMethods.includes(config.method.toUpperCase())) {
+      // Fetch token if not available
+      if (!csrfToken) {
+        await fetchCsrfToken();
+      }
+      
+      // Add CSRF token to header
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle CSRF token errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // If CSRF token error, refresh token and retry
+    if (error.response?.status === 403 && 
+        error.response?.data?.message?.includes('CSRF')) {
+      // Refresh CSRF token
+      await fetchCsrfToken();
+      
+      // Retry the original request
+      if (csrfToken && error.config) {
+        error.config.headers['X-CSRF-Token'] = csrfToken;
+        return api.request(error.config);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Initialize CSRF token on module load
+fetchCsrfToken();
+
 // Auth APIs
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
@@ -79,10 +145,22 @@ export const roomAPI = {
 export const roomExpenseAPI = {
   create: (data) => api.post('/room-expenses', data),
   getByRoom: (roomId, filters = {}) => api.get(`/room-expenses/${roomId}`, { params: filters }),
+  getHistory: (roomId, filters = {}) => api.get(`/room-expenses/${roomId}/history`, { params: filters }),
   getAnalytics: (roomId) => api.get(`/room-expenses/${roomId}/analytics`),
+  getDebtBreakdown: (roomId) => api.get(`/room-expenses/${roomId}/debt-breakdown`),
   updatePaymentStatus: (expenseId, memberUserId, status) => api.put(`/room-expenses/${expenseId}/status`, { memberUserId, status }),
-  updatePartialPayment: (expenseId, memberUserId, paidAmount) => api.put(`/room-expenses/${expenseId}/partial-payment`, { memberUserId, paidAmount }),
+  updatePartialPayment: (expenseId, memberUserId, paidAmount, shareAmount) => {
+    const body = { memberUserId };
+    if (paidAmount !== null && paidAmount !== undefined) {
+      body.paidAmount = paidAmount;
+    }
+    if (shareAmount !== null && shareAmount !== undefined) {
+      body.shareAmount = shareAmount;
+    }
+    return api.put(`/room-expenses/${expenseId}/partial-payment`, body);
+  },
   delete: (expenseId) => api.delete(`/room-expenses/${expenseId}`),
+  resetAll: (roomId) => api.delete(`/room-expenses/${roomId}/reset`),
 };
 
 export default api;

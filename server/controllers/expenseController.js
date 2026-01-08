@@ -1,5 +1,7 @@
 const Expense = require('../models/Expense');
 const { validationResult } = require('express-validator');
+const mongoose = require('mongoose');
+const { sanitizeMongoQuery, sanitizeString } = require('../middleware/sanitize');
 
 // Get all expenses with optional filters
 // SECURITY: Always filter by userId from authenticated token
@@ -17,17 +19,26 @@ exports.getExpenses = async (req, res, next) => {
       if (endDate) query.date.$lte = new Date(endDate);
     }
 
-    // Category filter
+    // Category filter - sanitize and validate
     if (category) {
-      query.category = category;
+      const sanitizedCategory = sanitizeString(category, { maxLength: 100 });
+      if (sanitizedCategory) {
+        query.category = sanitizedCategory;
+      }
     }
 
-    // Source type filter
+    // Source type filter - validate enum value
     if (sourceType) {
-      query.sourceType = sourceType;
+      const sanitizedSourceType = sanitizeString(sourceType, { maxLength: 50 });
+      // Only allow valid enum values
+      if (['salary', 'other'].includes(sanitizedSourceType)) {
+        query.sourceType = sanitizedSourceType;
+      }
     }
 
-    const expenses = await Expense.find(query).sort({ date: -1 });
+    // Sanitize the entire query before execution
+    const sanitizedQuery = sanitizeMongoQuery(query);
+    const expenses = await Expense.find(sanitizedQuery).sort({ date: -1 });
     res.json(expenses);
   } catch (error) {
     next(error);
@@ -38,8 +49,14 @@ exports.getExpenses = async (req, res, next) => {
 // SECURITY: Verify expense belongs to authenticated user
 exports.getExpense = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid expense ID format' });
+    }
+    
+    const expenseId = new mongoose.Types.ObjectId(req.params.id);
     const expense = await Expense.findOne({ 
-      _id: req.params.id,
+      _id: expenseId,
       userId: req.user.id // CRITICAL: User data isolation
     });
     
@@ -61,10 +78,14 @@ exports.createExpense = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    // Convert date string to Date object if provided
+    // Sanitize and prepare expense data
     const expenseData = {
-      ...req.body,
-      userId: req.user.id
+      itemName: sanitizeString(req.body.itemName, { maxLength: 200 }),
+      amount: sanitizeNumber(req.body.amount, { min: 0 }),
+      category: req.body.category ? sanitizeString(req.body.category, { maxLength: 100 }) : '',
+      sourceType: ['salary', 'other'].includes(req.body.sourceType) ? req.body.sourceType : 'salary',
+      date: req.body.date ? new Date(req.body.date) : new Date(),
+      userId: req.user.id // CRITICAL: Set from authenticated token
     };
     
     // Get timezone offset from request (if provided) or use 0 (UTC)
@@ -122,6 +143,11 @@ exports.createExpense = async (req, res, next) => {
 // SECURITY: Verify expense belongs to authenticated user
 exports.updateExpense = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid expense ID format' });
+    }
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -129,6 +155,20 @@ exports.updateExpense = async (req, res, next) => {
 
     // Remove userId and timezoneOffset from body if present
     const { userId, timezoneOffset: tzOffset, ...updateData } = req.body;
+    
+    // Sanitize update data
+    if (updateData.itemName) {
+      updateData.itemName = sanitizeString(updateData.itemName, { maxLength: 200 });
+    }
+    if (updateData.category) {
+      updateData.category = sanitizeString(updateData.category, { maxLength: 100 });
+    }
+    if (updateData.amount !== undefined) {
+      updateData.amount = sanitizeNumber(updateData.amount, { min: 0 });
+    }
+    if (updateData.sourceType && !['salary', 'other'].includes(updateData.sourceType)) {
+      updateData.sourceType = 'salary'; // Default to salary if invalid
+    }
     
     // Get timezone offset from request (if provided) or use 0 (UTC)
     const timezoneOffset = tzOffset ? parseInt(tzOffset) : 0;
@@ -156,9 +196,10 @@ exports.updateExpense = async (req, res, next) => {
       updateData.date.setUTCHours(0, 0, 0, 0);
     }
 
+    const expenseId = new mongoose.Types.ObjectId(req.params.id);
     const expense = await Expense.findOneAndUpdate(
       { 
-        _id: req.params.id,
+        _id: expenseId,
         userId: req.user.id // CRITICAL: User data isolation
       },
       updateData,
@@ -179,8 +220,14 @@ exports.updateExpense = async (req, res, next) => {
 // SECURITY: Verify expense belongs to authenticated user
 exports.deleteExpense = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid expense ID format' });
+    }
+    
+    const expenseId = new mongoose.Types.ObjectId(req.params.id);
     const expense = await Expense.findOneAndDelete({ 
-      _id: req.params.id,
+      _id: expenseId,
       userId: req.user.id // CRITICAL: User data isolation
     });
     
@@ -219,12 +266,20 @@ exports.deleteSelectedExpenses = async (req, res, next) => {
       return res.status(400).json({ message: 'Please provide an array of expense IDs to delete' });
     }
 
-    const mongoose = require('mongoose');
+    // Validate and sanitize all ObjectIds
+    const validIds = ids
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
+    
+    if (validIds.length === 0) {
+      return res.status(400).json({ message: 'No valid expense IDs provided' });
+    }
+
     const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     
     // Delete only expenses that belong to the authenticated user
     const result = await Expense.deleteMany({
-      _id: { $in: ids },
+      _id: { $in: validIds },
       userId: userIdObjectId // CRITICAL: User data isolation
     });
 

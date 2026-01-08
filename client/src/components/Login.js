@@ -77,10 +77,20 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
-                  placeholder="Minimum 6 characters"
+                  minLength={8}
+                  placeholder="Enter a strong password"
                   disabled={loading}
                 />
+                <small className="password-requirements">
+                  Password must contain:
+                  <ul>
+                    <li>At least 8 characters</li>
+                    <li>One uppercase letter (A-Z)</li>
+                    <li>One lowercase letter (a-z)</li>
+                    <li>One number (0-9)</li>
+                    <li>One special character (!@#$%^&*()_+-=[]{}|;:,.&lt;&gt;?)</li>
+                  </ul>
+                </small>
               </div>
               {error && <div className="error-message">{error}</div>}
               <button type="submit" className="btn-primary" disabled={loading}>

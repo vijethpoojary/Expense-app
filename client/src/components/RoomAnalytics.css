@@ -2,10 +2,45 @@
   margin-bottom: 2rem;
 }
 
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .analytics-title {
   font-size: 1.5rem;
-  margin-bottom: 1rem;
+  margin: 0;
   color: var(--text-primary);
+}
+
+.btn-reset-all {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-reset-all:hover:not(:disabled) {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-reset-all:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .analytics-grid {
@@ -55,6 +90,80 @@
   color: #10b981;
 }
 
+.debt-breakdown-section {
+  margin-top: 2rem;
+  background-color: var(--bg-card);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.debt-breakdown-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.debt-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.debt-breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: var(--bg-secondary, #f9fafb);
+  border-radius: 6px;
+}
+
+.debt-member-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.debt-amount {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.debt-amount.pending {
+  color: #ef4444;
+}
+
+.debt-amount.paid {
+  color: #10b981;
+}
+
+.debt-breakdown-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  background-color: var(--primary-color, #667eea);
+  color: white;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.debt-total-label {
+  font-size: 1.1rem;
+}
+
+.debt-total-amount {
+  font-size: 1.3rem;
+}
+
+.debt-breakdown-empty {
+  text-align: center;
+  padding: 1rem;
+  color: var(--text-secondary);
+}
+
 @media (max-width: 768px) {
   .analytics-grid {
     grid-template-columns: 1fr;
@@ -66,6 +175,10 @@
 
   .analytics-card-value {
     font-size: 1.25rem;
+  }
+
+  .debt-breakdown-section {
+    padding: 1rem;
   }
 }
 

@@ -56,6 +56,11 @@ const roomExpenseSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  isArchived: {
+    type: Boolean,
+    default: false,
+    index: true
   }
 }, {
   timestamps: true
@@ -65,6 +70,7 @@ const roomExpenseSchema = new mongoose.Schema({
 roomExpenseSchema.index({ roomId: 1, date: -1 });
 roomExpenseSchema.index({ paidBy: 1 });
 roomExpenseSchema.index({ 'splitDetails.userId': 1 });
+roomExpenseSchema.index({ roomId: 1, isArchived: 1, date: -1 });
 
 module.exports = mongoose.model('RoomExpense', roomExpenseSchema);
 

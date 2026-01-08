@@ -90,6 +90,24 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.password-requirements {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  line-height: 1.6;
+}
+
+.password-requirements ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.25rem;
+  list-style-type: disc;
+}
+
+.password-requirements li {
+  margin: 0.25rem 0;
+}
+
 .btn-primary {
   background-color: var(--primary-color);
   color: white;

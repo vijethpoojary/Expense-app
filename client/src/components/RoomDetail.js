@@ -6,6 +6,7 @@ import { useIsMobile } from '../hooks/useWindowSize';
 import RoomAnalytics from './RoomAnalytics';
 import RoomExpenseForm from './RoomExpenseForm';
 import RoomExpenseHistory from './RoomExpenseHistory';
+import RoomExpenseHistoryView from './RoomExpenseHistoryView';
 import FAB from './FAB';
 import './RoomDetail.css';
 
@@ -23,6 +24,7 @@ const RoomDetail = () => {
   const [memberEmail, setMemberEmail] = useState('');
   const [memberName, setMemberName] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     fetchRoomData();
@@ -123,7 +125,12 @@ const RoomDetail = () => {
         <h1 className="room-detail-title">{room.name}</h1>
       </div>
 
-      <RoomAnalytics analytics={analytics} />
+      <RoomAnalytics 
+        analytics={analytics} 
+        roomId={id} 
+        room={room}
+        onReset={fetchRoomData}
+      />
 
       <div className="room-detail-section">
         <div className="section-header">
@@ -169,22 +176,40 @@ const RoomDetail = () => {
       <div className="room-detail-section">
         <div className="section-header">
           <h2 className="section-title">Expense History</h2>
-          {!isMobile && (
+          <div className="section-header-actions">
             <button
-              className="btn-add-expense"
-              onClick={() => setShowExpenseForm(true)}
+              className="btn-history"
+              onClick={() => setShowHistory(true)}
             >
-              + Add Expense
+              📜 History
             </button>
-          )}
+            {!isMobile && (
+              <button
+                className="btn-add-expense"
+                onClick={() => setShowExpenseForm(true)}
+              >
+                + Add Expense
+              </button>
+            )}
+          </div>
         </div>
         <RoomExpenseHistory
           expenses={expenses}
           room={room}
           currentUserId={user?.id}
-          onUpdateStatus={fetchRoomData}
+          onUpdateStatus={() => {
+            fetchRoomData();
+          }}
         />
       </div>
+
+      {showHistory && (
+        <RoomExpenseHistoryView
+          room={room}
+          currentUserId={user?.id}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
 
       {showExpenseForm && (
         <RoomExpenseForm

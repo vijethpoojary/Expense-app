@@ -2,6 +2,7 @@ const RoomExpense = require('../models/RoomExpense');
 const Room = require('../models/Room');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
+const { sanitizeString, sanitizeMongoQuery } = require('../middleware/sanitize');
 
 // Asia/Kolkata timezone offset: UTC+5:30 = 330 minutes
 const IST_OFFSET = 330;
@@ -41,6 +42,15 @@ const getStartOfMonthIST = () => {
   return new Date(monthStartInIST.getTime() - (IST_OFFSET * 60 * 1000));
 };
 
+// Helper to check if all members have paid (all splitDetails have status 'paid')
+const areAllMembersPaid = (expense) => {
+  if (!expense.splitDetails || expense.splitDetails.length === 0) {
+    return false;
+  }
+  // Check if all split details have status 'paid'
+  return expense.splitDetails.every(split => split.status === 'paid');
+};
+
 // Create room expense
 // SECURITY: Verify user is room member, set paidBy from authenticated token
 exports.createRoomExpense = async (req, res, next) => {
@@ -51,7 +61,17 @@ exports.createRoomExpense = async (req, res, next) => {
     }
 
     const userId = req.user.id;
-    const { roomId, description, totalAmount, date, category } = req.body;
+    
+    // Validate and sanitize roomId
+    if (!mongoose.Types.ObjectId.isValid(req.body.roomId)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
+    const roomId = new mongoose.Types.ObjectId(req.body.roomId);
+    const description = sanitizeString(req.body.description, { maxLength: 500 });
+    const totalAmount = typeof req.body.totalAmount === 'number' ? req.body.totalAmount : parseFloat(req.body.totalAmount);
+    const date = req.body.date;
+    const category = req.body.category ? sanitizeString(req.body.category, { maxLength: 100 }) : '';
 
     // Verify user is a member of the room
     const room = await Room.findOne({
@@ -71,10 +91,10 @@ exports.createRoomExpense = async (req, res, next) => {
       return res.status(400).json({ message: 'Room has no members' });
     }
 
-    // Calculate equal split
+    // Calculate equal split - each member owes their share to the payer
     const shareAmount = totalAmount / room.members.length;
 
-    // Create split details - expense creator gets status 'paid' with shareAmount 0
+    // Create split details - expense creator (payer) gets shareAmount 0, others owe their share
     const splitDetails = room.members.map(member => ({
       userId: member.userId,
       shareAmount: member.userId.toString() === userId ? 0 : shareAmount,
@@ -105,13 +125,20 @@ exports.createRoomExpense = async (req, res, next) => {
 
     const expense = await RoomExpense.create({
       roomId,
-      description: description.trim(),
+      description: description, // Already sanitized
       totalAmount,
       paidBy: userId,
       splitDetails,
       date: expenseDate,
-      category: category ? category.trim() : ''
+      category: category, // Already sanitized
+      isArchived: false
     });
+
+    // Check if all members are already paid (edge case: single member room)
+    if (areAllMembersPaid(expense)) {
+      expense.isArchived = true;
+      await expense.save();
+    }
 
     res.status(201).json(expense);
   } catch (error) {
@@ -141,7 +168,7 @@ exports.getRoomExpenses = async (req, res, next) => {
     }
 
     const { startDate, endDate, category, paymentStatus } = req.query;
-    const query = { roomId };
+    const query = { roomId, isArchived: false }; // Exclude archived expenses by default
 
     // Date range filter
     if (startDate || endDate) {
@@ -202,9 +229,21 @@ exports.getRoomExpenses = async (req, res, next) => {
 // SECURITY: Only expense creator (paidBy) can update status
 exports.updatePaymentStatus = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid expense ID format' });
+    }
+    
     const userId = req.user.id;
-    const expenseId = req.params.id;
-    const { memberUserId, status } = req.body;
+    const expenseId = new mongoose.Types.ObjectId(req.params.id);
+    
+    // Validate memberUserId ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.body.memberUserId)) {
+      return res.status(400).json({ message: 'Invalid member user ID format' });
+    }
+    
+    const memberUserId = new mongoose.Types.ObjectId(req.body.memberUserId);
+    const status = req.body.status;
 
     if (!['paid', 'pending'].includes(status)) {
       return res.status(400).json({ message: 'Status must be "paid" or "pending"' });
@@ -239,11 +278,16 @@ exports.updatePaymentStatus = async (req, res, next) => {
     // If marking as paid, set paidAmount to shareAmount
     if (status === 'paid') {
       splitDetail.paidAmount = splitDetail.shareAmount;
-    } else {
-      // If marking as pending, reset paidAmount to 0
-      splitDetail.paidAmount = 0;
     }
+    // If marking as pending, keep paidAmount as is (don't reset to 0)
+    // This allows partial payments to remain recorded
     await expense.save();
+
+    // Check if all members are now paid, if so, archive the expense
+    if (areAllMembersPaid(expense)) {
+      expense.isArchived = true;
+      await expense.save();
+    }
 
     res.json(expense);
   } catch (error) {
@@ -253,16 +297,24 @@ exports.updatePaymentStatus = async (req, res, next) => {
 
 // Update partial payment amount for a split detail
 // SECURITY: Only expense creator (paidBy) can update payment amount
+// Can update either paidAmount or shareAmount (remaining amount)
 exports.updatePartialPayment = async (req, res, next) => {
   try {
-    const userId = req.user.id;
-    const expenseId = req.params.id;
-    const { memberUserId, paidAmount } = req.body;
-
-    const amount = parseFloat(paidAmount);
-    if (isNaN(amount) || amount < 0) {
-      return res.status(400).json({ message: 'Paid amount must be a valid positive number' });
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid expense ID format' });
     }
+    
+    const userId = req.user.id;
+    const expenseId = new mongoose.Types.ObjectId(req.params.id);
+    
+    // Validate memberUserId ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.body.memberUserId)) {
+      return res.status(400).json({ message: 'Invalid member user ID format' });
+    }
+    
+    const memberUserId = new mongoose.Types.ObjectId(req.body.memberUserId);
+    const { paidAmount, shareAmount } = req.body;
 
     // Find expense and verify user is the creator (paidBy)
     const expense = await RoomExpense.findById(expenseId);
@@ -289,21 +341,43 @@ exports.updatePartialPayment = async (req, res, next) => {
       return res.status(404).json({ message: 'Member not found in split details' });
     }
 
-    // Ensure paidAmount doesn't exceed shareAmount
-    const finalPaidAmount = Math.min(amount, splitDetail.shareAmount);
-    splitDetail.paidAmount = finalPaidAmount;
+    // If shareAmount is provided, update the remaining amount (for editing how much they owe)
+    if (shareAmount !== undefined && shareAmount !== null) {
+      const newShareAmount = parseFloat(shareAmount);
+      if (isNaN(newShareAmount) || newShareAmount < 0) {
+        return res.status(400).json({ message: 'Share amount must be a valid positive number' });
+      }
+      splitDetail.shareAmount = newShareAmount;
+    }
+
+    // If paidAmount is provided, update the paid amount
+    if (paidAmount !== undefined && paidAmount !== null) {
+      const amount = parseFloat(paidAmount);
+      if (isNaN(amount) || amount < 0) {
+        return res.status(400).json({ message: 'Paid amount must be a valid positive number' });
+      }
+      // Ensure paidAmount doesn't exceed shareAmount
+      const finalPaidAmount = Math.min(amount, splitDetail.shareAmount);
+      splitDetail.paidAmount = finalPaidAmount;
+    }
     
-    // Update status based on paidAmount
-    if (finalPaidAmount >= splitDetail.shareAmount) {
+    // Update status based on paidAmount and shareAmount
+    if (splitDetail.paidAmount >= splitDetail.shareAmount) {
       splitDetail.status = 'paid';
       splitDetail.paidAmount = splitDetail.shareAmount; // Ensure exact match
-    } else if (finalPaidAmount > 0) {
+    } else if (splitDetail.paidAmount > 0) {
       splitDetail.status = 'pending'; // Partial payment, still pending
     } else {
       splitDetail.status = 'pending'; // No payment, pending
     }
     
     await expense.save();
+
+    // Check if all members are now paid, if so, archive the expense
+    if (areAllMembersPaid(expense)) {
+      expense.isArchived = true;
+      await expense.save();
+    }
 
     res.json(expense);
   } catch (error) {
@@ -315,8 +389,13 @@ exports.updatePartialPayment = async (req, res, next) => {
 // SECURITY: Only expense creator (paidBy) can delete expense
 exports.deleteRoomExpense = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid expense ID format' });
+    }
+    
     const userId = req.user.id;
-    const expenseId = req.params.id;
+    const expenseId = new mongoose.Types.ObjectId(req.params.id);
 
     // Find expense and verify user is the creator (paidBy)
     const expense = await RoomExpense.findById(expenseId);
@@ -332,6 +411,84 @@ exports.deleteRoomExpense = async (req, res, next) => {
     await RoomExpense.findByIdAndDelete(expenseId);
 
     res.json({ message: 'Expense deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get individual debt breakdown per person
+// SECURITY: Verify user is room member
+exports.getDebtBreakdown = async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const roomId = req.params.roomId;
+
+    // Verify user is a member of the room
+    const room = await Room.findOne({
+      _id: roomId,
+      isActive: true,
+      $or: [
+        { createdBy: userId },
+        { 'members.userId': userId }
+      ]
+    });
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found or access denied' });
+    }
+
+    // Get all expenses for the room
+    const allExpenses = await RoomExpense.find({ roomId });
+
+    // Calculate individual debts: how much user owes to each person
+    const debtBreakdown = {}; // { memberUserId: amount }
+    
+    // Initialize all members with 0 debt
+    room.members.forEach(member => {
+      const memberUserId = member.userId.toString();
+      if (memberUserId !== userId.toString()) {
+        debtBreakdown[memberUserId] = {
+          userId: memberUserId,
+          name: member.name,
+          email: member.email,
+          amount: 0
+        };
+      }
+    });
+
+    // Calculate debts from each expense
+    allExpenses.forEach(expense => {
+      const paidByUserId = expense.paidBy.toString();
+      
+      // Skip if user is the payer
+      if (paidByUserId === userId.toString()) {
+        return;
+      }
+
+      // Find user's split in this expense
+      const userSplit = expense.splitDetails.find(
+        split => split.userId.toString() === userId.toString()
+      );
+      
+      if (userSplit) {
+        const paidAmount = userSplit.paidAmount || 0;
+        const remainingAmount = userSplit.shareAmount - paidAmount;
+        
+        // Add to debt breakdown for the payer
+        if (debtBreakdown[paidByUserId]) {
+          debtBreakdown[paidByUserId].amount += remainingAmount;
+        }
+      }
+    });
+
+    // Convert to array and calculate total
+    const breakdownArray = Object.values(debtBreakdown);
+    const totalPending = breakdownArray.reduce((sum, item) => sum + item.amount, 0);
+
+    res.json({
+      breakdown: breakdownArray,
+      totalPending
+    });
   } catch (error) {
     next(error);
   }
@@ -401,12 +558,9 @@ exports.getRoomAnalytics = async (req, res, next) => {
       }
     });
 
-    // Calculate user's paid vs owed amounts with new net balance logic
-    // If what_they_owe >= what_they_are_owed: show (what_they_owe - what_they_are_owed)
-    // If what_they_owe < what_they_are_owed: show what_they_owe
+    // Calculate user's paid vs owed amounts - NO NETTING, each expense is isolated
     let userPaid = 0;
-    let amountOwed = 0; // What user owes to others
-    let amountOwedToUser = 0; // What others owe to user
+    let totalOwed = 0; // Total amount user owes to others (sum of all individual debts)
 
     allExpenses.forEach(expense => {
       const paidByUserId = expense.paidBy.toString();
@@ -414,49 +568,139 @@ exports.getRoomAnalytics = async (req, res, next) => {
       if (paidByUserId === userId.toString()) {
         // User paid this expense
         userPaid += expense.totalAmount;
-        
-        // Calculate how much others owe user from this expense
-        expense.splitDetails.forEach(split => {
-          if (split.userId.toString() !== userId.toString()) {
-            const paidAmount = split.paidAmount || 0;
-            const remainingAmount = split.shareAmount - paidAmount;
-            amountOwedToUser += remainingAmount;
-          }
-        });
       } else {
-        // User didn't pay this expense - check their share
+        // User didn't pay this expense - check their share (what they owe to the payer)
         const userSplit = expense.splitDetails.find(
           split => split.userId.toString() === userId.toString()
         );
         if (userSplit) {
           const paidAmount = userSplit.paidAmount || 0;
           const remainingAmount = userSplit.shareAmount - paidAmount;
-          amountOwed += remainingAmount;
+          totalOwed += remainingAmount;
         }
       }
     });
-
-    // Calculate display balance using same logic as frontend
-    // If what they owe >= what they're owed: show net
-    // If what they owe < what they're owed: show what they owe
-    let userOwed;
-    if (amountOwed >= amountOwedToUser) {
-      userOwed = amountOwed - amountOwedToUser;
-    } else {
-      userOwed = amountOwed;
-    }
-
-    // Net balance: what user owes minus what others owe user
-    const netBalance = amountOwed - amountOwedToUser;
 
     res.json({
       today: todayTotal,
       week: weekTotal,
       month: monthTotal,
       userPaid,
-      userOwed: userOwed > 0 ? userOwed : 0, // Show pending amount
-      othersOweUser: amountOwedToUser,
-      netBalance // Positive = user owes, Negative = others owe user
+      userOwed: totalOwed > 0 ? totalOwed : 0 // Total pending amount (sum of all individual debts, no netting)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get room expense history (all expenses including archived)
+// SECURITY: Verify user is room member
+exports.getRoomExpenseHistory = async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const roomId = req.params.roomId;
+
+    // Verify user is a member of the room
+    const room = await Room.findOne({
+      _id: roomId,
+      isActive: true,
+      $or: [
+        { createdBy: userId },
+        { 'members.userId': userId }
+      ]
+    });
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found or access denied' });
+    }
+
+    const { startDate, endDate, category, memberName } = req.query;
+    const query = { roomId }; // Include both archived and non-archived
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) {
+        const startParts = startDate.split('-');
+        if (startParts.length === 3) {
+          const year = parseInt(startParts[0], 10);
+          const month = parseInt(startParts[1], 10) - 1;
+          const day = parseInt(startParts[2], 10);
+          const startDateIST = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+          query.date.$gte = new Date(startDateIST.getTime() - (IST_OFFSET * 60 * 1000));
+        } else {
+          query.date.$gte = new Date(startDate);
+        }
+      }
+      if (endDate) {
+        const endParts = endDate.split('-');
+        if (endParts.length === 3) {
+          const year = parseInt(endParts[0], 10);
+          const month = parseInt(endParts[1], 10) - 1;
+          const day = parseInt(endParts[2], 10);
+          const endDateIST = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+          query.date.$lte = new Date(endDateIST.getTime() - (IST_OFFSET * 60 * 1000));
+        } else {
+          query.date.$lte = new Date(endDate);
+        }
+      }
+    }
+
+    // Category filter
+    if (category) {
+      query.category = category;
+    }
+
+    let expenses = await RoomExpense.find(query)
+      .populate('paidBy', 'email')
+      .sort({ date: -1 }); // Sort by date descending (newest first)
+
+    // Member name filter (filter by paidBy member name)
+    if (memberName) {
+      const memberIds = room.members
+        .filter(member => 
+          member.name.toLowerCase().includes(memberName.toLowerCase()) ||
+          member.email.toLowerCase().includes(memberName.toLowerCase())
+        )
+        .map(member => member.userId.toString());
+      
+      expenses = expenses.filter(expense => {
+        const paidByUserId = expense.paidBy?._id?.toString() || expense.paidBy?.toString();
+        return memberIds.includes(paidByUserId);
+      });
+    }
+
+    res.json(expenses);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reset all expenses for a room (delete all expenses)
+// SECURITY: Only room creator can reset
+exports.resetRoomExpenses = async (req, res, next) => {
+  try {
+    console.log('Reset route hit:', req.params);
+    const userId = req.user.id;
+    const roomId = req.params.roomId;
+
+    // Verify user is the room creator
+    const room = await Room.findOne({
+      _id: roomId,
+      createdBy: userId,
+      isActive: true
+    });
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found or you are not the creator' });
+    }
+
+    // Delete all expenses for this room (both archived and non-archived)
+    const result = await RoomExpense.deleteMany({ roomId });
+
+    res.json({ 
+      message: 'All expenses have been reset successfully',
+      deletedCount: result.deletedCount
     });
   } catch (error) {
     next(error);

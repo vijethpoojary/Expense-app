@@ -2,6 +2,7 @@ const Room = require('../models/Room');
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
+const { sanitizeString, sanitizeEmail } = require('../middleware/sanitize');
 
 // Create a new room
 // SECURITY: Set createdBy from authenticated token
@@ -13,7 +14,7 @@ exports.createRoom = async (req, res, next) => {
     }
 
     const { name } = req.body;
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const userId = req.user.id;
     
     // Get user info for adding as first member
     const user = await User.findById(userId);
@@ -65,8 +66,13 @@ exports.getRooms = async (req, res, next) => {
 // SECURITY: Verify user is a member of the room
 exports.getRoom = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
     const userId = new mongoose.Types.ObjectId(req.user.id);
-    const roomId = req.params.id;
+    const roomId = new mongoose.Types.ObjectId(req.params.id);
 
     const room = await Room.findOne({
       _id: roomId,
@@ -96,9 +102,19 @@ exports.addMember = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user.id);
-    const roomId = req.params.id;
-    const { email, name } = req.body;
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
+    const userId = req.user.id;
+    const roomId = new mongoose.Types.ObjectId(req.params.id);
+    const email = sanitizeEmail(req.body.email);
+    const name = sanitizeString(req.body.name, { maxLength: 100 });
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Invalid email address' });
+    }
 
     // Find room and verify user is creator
     const room = await Room.findOne({
@@ -146,7 +162,7 @@ exports.addMember = async (req, res, next) => {
 // SECURITY: Only room creator can remove members
 exports.removeMember = async (req, res, next) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const userId = req.user.id;
     const roomId = req.params.id;
     const { memberId } = req.body;
 
@@ -162,7 +178,7 @@ exports.removeMember = async (req, res, next) => {
     }
 
     // Prevent removing the creator
-    if (memberId.toString() === userId.toString()) {
+    if (memberId === userId) {
       return res.status(400).json({ message: 'Cannot remove room creator' });
     }
 
@@ -183,7 +199,7 @@ exports.removeMember = async (req, res, next) => {
 // SECURITY: Only room creator can delete room
 exports.deleteRoom = async (req, res, next) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const userId = req.user.id;
     const roomId = req.params.id;
 
     const room = await Room.findOneAndUpdate(

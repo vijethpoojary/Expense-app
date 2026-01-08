@@ -14,6 +14,40 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Custom password validation for strength requirements
+const validatePassword = (value) => {
+  if (!value) {
+    throw new Error('Password is required');
+  }
+  
+  // Minimum 8 characters
+  if (value.length < 8) {
+    throw new Error('Password must be at least 8 characters long');
+  }
+  
+  // At least one uppercase letter
+  if (!/[A-Z]/.test(value)) {
+    throw new Error('Password must contain at least one uppercase letter');
+  }
+  
+  // At least one lowercase letter
+  if (!/[a-z]/.test(value)) {
+    throw new Error('Password must contain at least one lowercase letter');
+  }
+  
+  // At least one number
+  if (!/[0-9]/.test(value)) {
+    throw new Error('Password must contain at least one number');
+  }
+  
+  // At least one special character
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) {
+    throw new Error('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
+  }
+  
+  return true;
+};
+
 // Validation rules
 const registerValidation = [
   body('email')
@@ -21,8 +55,7 @@ const registerValidation = [
     .withMessage('Please provide a valid email')
     .normalizeEmail(),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+    .custom(validatePassword)
     .trim()
 ];
 

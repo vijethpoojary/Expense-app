@@ -2,9 +2,35 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
+
+// Security Headers with Helmet
+// Configure Helmet for production with CORS compatibility
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable for CORS compatibility
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resources
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 
 // Middleware
 const corsOptions = {
@@ -18,8 +44,12 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(cookieParser()); // Parse cookies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Limit request size
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Limit request size
+
+// Input sanitization middleware (must be after body parsing)
+const { sanitizeQuery } = require('./middleware/sanitize');
+app.use(sanitizeQuery);
 
 // Health check route (public)
 app.get('/', (req, res) => {
@@ -30,26 +60,35 @@ app.get('/', (req, res) => {
   });
 });
 
+// CSRF token endpoint (public - needed before authentication)
+const { generateCsrfToken } = require('./middleware/csrf');
+app.get('/api/csrf-token', generateCsrfToken);
+
 // Auth routes (public)
 app.use('/api/auth', require('./routes/authRoutes'));
 
-// Protected routes (require authentication)
+// Protected routes (require authentication + CSRF protection)
 const { authenticate } = require('./middleware/auth');
-app.use('/api/expenses', authenticate, require('./routes/expenseRoutes'));
-app.use('/api/salary', authenticate, require('./routes/salaryRoutes'));
-app.use('/api/investments', authenticate, require('./routes/investmentRoutes'));
-app.use('/api/analytics', authenticate, require('./routes/analyticsRoutes'));
-app.use('/api/rooms', authenticate, require('./routes/roomRoutes'));
-app.use('/api/room-expenses', authenticate, require('./routes/roomExpenseRoutes'));
+const { csrfProtection } = require('./middleware/csrf');
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err : {}
-  });
+// Apply CSRF protection to all state-changing routes
+app.use('/api/expenses', authenticate, csrfProtection, require('./routes/expenseRoutes'));
+app.use('/api/salary', authenticate, csrfProtection, require('./routes/salaryRoutes'));
+app.use('/api/investments', authenticate, csrfProtection, require('./routes/investmentRoutes'));
+app.use('/api/analytics', authenticate, csrfProtection, require('./routes/analyticsRoutes'));
+app.use('/api/rooms', authenticate, csrfProtection, require('./routes/roomRoutes'));
+app.use('/api/room-expenses', authenticate, csrfProtection, require('./routes/roomExpenseRoutes'));
+
+// 404 handler for undefined routes
+app.use((req, res, next) => {
+  const error = new Error('Route not found');
+  error.status = 404;
+  next(error);
 });
+
+// Error handling middleware (must be last)
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 // MongoDB Connection
 const connectDB = async () => {
