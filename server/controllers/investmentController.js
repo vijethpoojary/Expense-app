@@ -8,7 +8,8 @@ const { sanitizeMongoQuery, sanitizeString, sanitizeNumber } = require('../middl
 exports.getInvestments = async (req, res, next) => {
   try {
     const { startDate, endDate, investmentType } = req.query;
-    const query = { userId: req.user.id }; // CRITICAL: User data isolation
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
+    const query = { userId: userIdObjectId }; // CRITICAL: User data isolation
 
     // Date range filter
     if (startDate || endDate) {
@@ -44,9 +45,10 @@ exports.getInvestment = async (req, res, next) => {
     }
     
     const investmentId = new mongoose.Types.ObjectId(req.params.id);
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const investment = await Investment.findOne({ 
       _id: investmentId,
-      userId: req.user.id // CRITICAL: User data isolation
+      userId: userIdObjectId // CRITICAL: User data isolation
     });
     
     if (!investment) {
@@ -72,8 +74,14 @@ exports.createInvestment = async (req, res, next) => {
       investmentName: sanitizeString(req.body.investmentName, { maxLength: 200 }),
       amount: sanitizeNumber(req.body.amount, { min: 0 }),
       investmentType: req.body.investmentType ? sanitizeString(req.body.investmentType, { maxLength: 100 }) : '',
-      date: req.body.date ? new Date(req.body.date) : new Date(),
-      userId: req.user.id // CRITICAL: Set from authenticated token
+      date: req.body.date ? (() => {
+        const date = new Date(req.body.date);
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date format');
+        }
+        return date;
+      })() : new Date(),
+      userId: new mongoose.Types.ObjectId(req.user.id) // CRITICAL: Set from authenticated token
     };
     
     const investment = await Investment.create(investmentData);
@@ -112,10 +120,11 @@ exports.updateInvestment = async (req, res, next) => {
     }
 
     const investmentId = new mongoose.Types.ObjectId(req.params.id);
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const investment = await Investment.findOneAndUpdate(
       { 
         _id: investmentId,
-        userId: req.user.id // CRITICAL: User data isolation
+        userId: userIdObjectId // CRITICAL: User data isolation
       },
       updateData,
       { new: true, runValidators: true }
@@ -141,9 +150,10 @@ exports.deleteInvestment = async (req, res, next) => {
     }
     
     const investmentId = new mongoose.Types.ObjectId(req.params.id);
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const investment = await Investment.findOneAndDelete({ 
       _id: investmentId,
-      userId: req.user.id // CRITICAL: User data isolation
+      userId: userIdObjectId // CRITICAL: User data isolation
     });
     
     if (!investment) {
@@ -195,7 +205,6 @@ exports.deleteSelectedInvestments = async (req, res, next) => {
 // SECURITY: Only delete investments that belong to authenticated user
 exports.deleteAllInvestments = async (req, res, next) => {
   try {
-    const mongoose = require('mongoose');
     const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     
     // Delete all investments for the authenticated user

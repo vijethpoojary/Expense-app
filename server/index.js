@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
@@ -60,12 +61,21 @@ app.get('/', (req, res) => {
   });
 });
 
+// Rate limiting for auth endpoints (prevent brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 25, // Limit each IP to 5 requests per windowMs
+  message: 'Too many login attempts, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // CSRF token endpoint (public - needed before authentication)
 const { generateCsrfToken } = require('./middleware/csrf');
 app.get('/api/csrf-token', generateCsrfToken);
 
-// Auth routes (public)
-app.use('/api/auth', require('./routes/authRoutes'));
+// Auth routes (public) with rate limiting
+app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 
 // Protected routes (require authentication + CSRF protection)
 const { authenticate } = require('./middleware/auth');

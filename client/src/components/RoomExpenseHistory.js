@@ -80,27 +80,34 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
     }));
   };
 
-  const handleSavePartialPayment = async (expenseId, memberUserId, currentPaidAmount) => {
+  const handleSavePartialPayment = async (expenseId, memberUserId, currentPaidAmount, currentShareAmount) => {
     const key = `${expenseId}-${memberUserId}`;
-    const remainingAmount = partialPaymentAmounts[key];
+    const paymentAmount = partialPaymentAmounts[key];
     
-    if (remainingAmount === undefined || remainingAmount === '') {
+    if (paymentAmount === undefined || paymentAmount === '') {
       alert('Please enter an amount');
       return;
     }
 
-    const numRemaining = parseFloat(remainingAmount);
-    if (isNaN(numRemaining) || numRemaining < 0) {
+    const numPayment = parseFloat(paymentAmount);
+    if (isNaN(numPayment) || numPayment < 0) {
       alert('Please enter a valid positive number');
+      return;
+    }
+
+    // Calculate new paidAmount = currentPaidAmount + paymentAmount entered by user
+    const newPaidAmount = (currentPaidAmount || 0) + numPayment;
+    
+    // Ensure paidAmount doesn't exceed shareAmount
+    if (newPaidAmount > currentShareAmount) {
+      alert(`Payment amount cannot exceed the total share amount of ₹${currentShareAmount.toFixed(2)}`);
       return;
     }
 
     try {
       setUpdatingStatus(prev => ({ ...prev, [key]: true }));
-      // Calculate new shareAmount = paidAmount + remainingAmount
-      // This allows editing the remaining amount while keeping paidAmount the same
-      const newShareAmount = (currentPaidAmount || 0) + numRemaining;
-      await roomExpenseAPI.updatePartialPayment(expenseId, memberUserId, null, newShareAmount);
+      // Update paidAmount by adding the payment amount entered by user
+      await roomExpenseAPI.updatePartialPayment(expenseId, memberUserId, newPaidAmount, null);
       setEditingPartialPayment(prev => {
         const newState = { ...prev };
         delete newState[key];
@@ -336,16 +343,17 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                                     <input
                                       type="number"
                                       className="partial-payment-input"
-                                      placeholder="Enter remaining amount"
-                                      value={partialPaymentAmounts[key] !== undefined ? partialPaymentAmounts[key] : remainingAmount}
+                                      placeholder="Enter amount to pay"
+                                      value={partialPaymentAmounts[key] !== undefined ? partialPaymentAmounts[key] : ''}
                                       onChange={(e) => handlePartialPaymentChange(expense._id, split.userId?.toString() || split.userId, e.target.value)}
                                       min="0"
                                       step="0.01"
+                                      max={remainingAmount}
                                       autoFocus
                                     />
                                     <button
                                       className="btn-save-partial"
-                                      onClick={() => handleSavePartialPayment(expense._id, split.userId?.toString() || split.userId, split.paidAmount || 0)}
+                                      onClick={() => handleSavePartialPayment(expense._id, split.userId?.toString() || split.userId, split.paidAmount || 0, split.shareAmount || 0)}
                                       disabled={isUpdating}
                                     >
                                       {isUpdating ? '...' : 'Save'}
@@ -389,9 +397,10 @@ const RoomExpenseHistory = ({ expenses, room, currentUserId, onUpdateStatus }) =
                                             ...prev,
                                             [key]: true
                                           }));
+                                          // Initialize with empty string so user can enter the payment amount
                                           setPartialPaymentAmounts(prev => ({
                                             ...prev,
-                                            [key]: remainingAmount
+                                            [key]: ''
                                           }));
                                         }}
                                         disabled={isUpdating}

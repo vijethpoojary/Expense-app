@@ -1,13 +1,12 @@
 const Expense = require('../models/Expense');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
-const { sanitizeMongoQuery, sanitizeString } = require('../middleware/sanitize');
+const { sanitizeMongoQuery, sanitizeString, sanitizeNumber } = require('../middleware/sanitize');
 
 // Get all expenses with optional filters
 // SECURITY: Always filter by userId from authenticated token
 exports.getExpenses = async (req, res, next) => {
   try {
-    const mongoose = require('mongoose');
     const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const { startDate, endDate, category, sourceType } = req.query;
     const query = { userId: userIdObjectId }; // CRITICAL: User data isolation
@@ -55,9 +54,10 @@ exports.getExpense = async (req, res, next) => {
     }
     
     const expenseId = new mongoose.Types.ObjectId(req.params.id);
+    const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const expense = await Expense.findOne({ 
       _id: expenseId,
-      userId: req.user.id // CRITICAL: User data isolation
+      userId: userIdObjectId // CRITICAL: User data isolation
     });
     
     if (!expense) {
@@ -84,7 +84,13 @@ exports.createExpense = async (req, res, next) => {
       amount: sanitizeNumber(req.body.amount, { min: 0 }),
       category: req.body.category ? sanitizeString(req.body.category, { maxLength: 100 }) : '',
       sourceType: ['salary', 'other'].includes(req.body.sourceType) ? req.body.sourceType : 'salary',
-      date: req.body.date ? new Date(req.body.date) : new Date(),
+      date: req.body.date ? (() => {
+        const date = new Date(req.body.date);
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date format');
+        }
+        return date;
+      })() : new Date(),
       userId: req.user.id // CRITICAL: Set from authenticated token
     };
     
@@ -244,7 +250,6 @@ exports.deleteExpense = async (req, res, next) => {
 // SECURITY: Only return categories for authenticated user's expenses
 exports.getCategories = async (req, res, next) => {
   try {
-    const mongoose = require('mongoose');
     const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     const categories = await Expense.distinct('category', { 
       userId: userIdObjectId, // CRITICAL: User data isolation
@@ -296,7 +301,6 @@ exports.deleteSelectedExpenses = async (req, res, next) => {
 // SECURITY: Only delete expenses that belong to authenticated user
 exports.deleteAllExpenses = async (req, res, next) => {
   try {
-    const mongoose = require('mongoose');
     const userIdObjectId = new mongoose.Types.ObjectId(req.user.id);
     
     // Delete all expenses for the authenticated user

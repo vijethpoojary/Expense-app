@@ -17,6 +17,7 @@ const BottomNav = () => {
     { path: '/expenses', label: 'Expenses', icon: '💸' },
     { path: '/investments', label: 'Investments', icon: '📈' },
     { path: '/rooms', label: 'Rooms', icon: '🏠' },
+    { path: '/history', label: 'History', icon: '📜' },
     { path: '/summary', label: 'Summary', icon: '📋' },
   ];
 

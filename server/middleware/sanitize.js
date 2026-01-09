@@ -124,9 +124,17 @@ const sanitizeQuery = (req, res, next) => {
           return;
         }
         
+        // Don't sanitize ObjectId fields - let controllers validate them
+        if (key === 'memberUserId' || key === 'userId' || key === 'roomId' || key.includes('Id')) {
+          // Just ensure it's a string, don't sanitize
+          return;
+        }
+        
         // Sanitize based on field type
+        // Skip email sanitization - let validation handle it (sanitizeEmail can return null)
         if (key === 'email') {
-          req.body[key] = sanitizeEmail(value);
+          // Just normalize email (lowercase, trim) but don't validate here
+          req.body[key] = value.trim().toLowerCase();
         } else if (key.includes('date') || key === 'date') {
           // Dates are handled separately
           return;
@@ -143,15 +151,16 @@ const sanitizeQuery = (req, res, next) => {
   }
   
   // Sanitize URL parameters (ObjectIds)
+  // Note: Don't convert ObjectIds here - let controllers validate and convert
+  // This prevents breaking valid ObjectId strings before validation
   if (req.params) {
     Object.keys(req.params).forEach(key => {
+      // Skip ObjectId fields - let controllers handle validation
       if (key === 'id' || key.includes('Id') || key === 'roomId' || key === 'expenseId' || key === 'memberId') {
-        const sanitized = sanitizeObjectId(req.params[key]);
-        if (sanitized === null && req.params[key]) {
-          // Invalid ObjectId - will be caught by validation
-          return;
+        // Just ensure it's a string, don't convert yet
+        if (typeof req.params[key] !== 'string') {
+          req.params[key] = String(req.params[key]);
         }
-        req.params[key] = sanitized ? sanitized.toString() : req.params[key];
       } else if (typeof req.params[key] === 'string') {
         req.params[key] = sanitizeString(req.params[key], { maxLength: 200 });
       }
@@ -181,7 +190,18 @@ const sanitizeMongoQuery = (query) => {
     }
     
     // Sanitize based on value type
-    if (typeof value === 'string') {
+    if (value instanceof mongoose.Types.ObjectId) {
+      // Already an ObjectId - pass through
+      sanitized[key] = value;
+    } else if (value instanceof Date) {
+      // Already a Date - pass through
+      sanitized[key] = value;
+    } else if (typeof value === 'string') {
+      // Skip empty strings
+      if (value === '') {
+        return;
+      }
+      
       // For ObjectId fields, validate ObjectId
       if (key === '_id' || key.endsWith('Id') || key === 'userId' || key === 'roomId') {
         if (mongoose.Types.ObjectId.isValid(value)) {
@@ -195,7 +215,7 @@ const sanitizeMongoQuery = (query) => {
         sanitized[key] = sanitizeString(value, { maxLength: 500 });
       }
     } else if (typeof value === 'object' && value !== null) {
-      // Recursively sanitize nested objects
+      // Recursively sanitize nested objects (like date: { $gte: ..., $lte: ... })
       sanitized[key] = sanitizeMongoQuery(value);
     } else {
       // Numbers, booleans, etc. - pass through

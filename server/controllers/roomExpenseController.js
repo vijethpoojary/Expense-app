@@ -69,7 +69,19 @@ exports.createRoomExpense = async (req, res, next) => {
     
     const roomId = new mongoose.Types.ObjectId(req.body.roomId);
     const description = sanitizeString(req.body.description, { maxLength: 500 });
-    const totalAmount = typeof req.body.totalAmount === 'number' ? req.body.totalAmount : parseFloat(req.body.totalAmount);
+    
+    // Validate and sanitize totalAmount
+    let totalAmount;
+    if (typeof req.body.totalAmount === 'number') {
+      totalAmount = req.body.totalAmount;
+    } else {
+      totalAmount = parseFloat(req.body.totalAmount);
+    }
+    
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+      return res.status(400).json({ message: 'Total amount must be a positive number' });
+    }
+    
     const date = req.body.date;
     const category = req.body.category ? sanitizeString(req.body.category, { maxLength: 100 }) : '';
 
@@ -119,6 +131,11 @@ exports.createRoomExpense = async (req, res, next) => {
       } else {
         expenseDate = new Date(date);
       }
+      
+      // Validate parsed date
+      if (isNaN(expenseDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid date format' });
+      }
     } else {
       expenseDate = getStartOfDayIST();
     }
@@ -150,8 +167,13 @@ exports.createRoomExpense = async (req, res, next) => {
 // SECURITY: Verify user is room member
 exports.getRoomExpenses = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.roomId)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
     const userId = new mongoose.Types.ObjectId(req.user.id);
-    const roomId = req.params.roomId;
+    const roomId = new mongoose.Types.ObjectId(req.params.roomId);
 
     // Verify user is a member of the room
     const room = await Room.findOne({
@@ -261,13 +283,13 @@ exports.updatePaymentStatus = async (req, res, next) => {
     }
 
     // Prevent updating payer's status
-    if (memberUserId === userId) {
+    if (memberUserId.toString() === userId) {
       return res.status(400).json({ message: 'Cannot update payment status for expense creator' });
     }
 
     // Update the split detail
     const splitDetail = expense.splitDetails.find(
-      split => split.userId.toString() === memberUserId
+      split => split.userId.toString() === memberUserId.toString()
     );
 
     if (!splitDetail) {
@@ -314,7 +336,24 @@ exports.updatePartialPayment = async (req, res, next) => {
     }
     
     const memberUserId = new mongoose.Types.ObjectId(req.body.memberUserId);
-    const { paidAmount, shareAmount } = req.body;
+    
+    // Validate amounts
+    let paidAmount = req.body.paidAmount;
+    let shareAmount = req.body.shareAmount;
+    
+    if (paidAmount !== undefined) {
+      paidAmount = typeof paidAmount === 'number' ? paidAmount : parseFloat(paidAmount);
+      if (isNaN(paidAmount) || paidAmount < 0) {
+        return res.status(400).json({ message: 'Paid amount must be a non-negative number' });
+      }
+    }
+    
+    if (shareAmount !== undefined) {
+      shareAmount = typeof shareAmount === 'number' ? shareAmount : parseFloat(shareAmount);
+      if (isNaN(shareAmount) || shareAmount <= 0) {
+        return res.status(400).json({ message: 'Share amount must be a positive number' });
+      }
+    }
 
     // Find expense and verify user is the creator (paidBy)
     const expense = await RoomExpense.findById(expenseId);
@@ -328,13 +367,13 @@ exports.updatePartialPayment = async (req, res, next) => {
     }
 
     // Prevent updating payer's amount
-    if (memberUserId === userId) {
+    if (memberUserId.toString() === userId) {
       return res.status(400).json({ message: 'Cannot update payment amount for expense creator' });
     }
 
     // Update the split detail
     const splitDetail = expense.splitDetails.find(
-      split => split.userId.toString() === memberUserId
+      split => split.userId.toString() === memberUserId.toString()
     );
 
     if (!splitDetail) {
@@ -420,8 +459,13 @@ exports.deleteRoomExpense = async (req, res, next) => {
 // SECURITY: Verify user is room member
 exports.getDebtBreakdown = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.roomId)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
     const userId = new mongoose.Types.ObjectId(req.user.id);
-    const roomId = req.params.roomId;
+    const roomId = new mongoose.Types.ObjectId(req.params.roomId);
 
     // Verify user is a member of the room
     const room = await Room.findOne({
@@ -498,8 +542,13 @@ exports.getDebtBreakdown = async (req, res, next) => {
 // SECURITY: Verify user is room member
 exports.getRoomAnalytics = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.roomId)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
     const userId = new mongoose.Types.ObjectId(req.user.id);
-    const roomId = req.params.roomId;
+    const roomId = new mongoose.Types.ObjectId(req.params.roomId);
 
     // Verify user is a member of the room
     const room = await Room.findOne({
@@ -597,8 +646,13 @@ exports.getRoomAnalytics = async (req, res, next) => {
 // SECURITY: Verify user is room member
 exports.getRoomExpenseHistory = async (req, res, next) => {
   try {
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.roomId)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
     const userId = new mongoose.Types.ObjectId(req.user.id);
-    const roomId = req.params.roomId;
+    const roomId = new mongoose.Types.ObjectId(req.params.roomId);
 
     // Verify user is a member of the room
     const room = await Room.findOne({
@@ -680,9 +734,13 @@ exports.getRoomExpenseHistory = async (req, res, next) => {
 // SECURITY: Only room creator can reset
 exports.resetRoomExpenses = async (req, res, next) => {
   try {
-    console.log('Reset route hit:', req.params);
+    // Validate and sanitize ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.roomId)) {
+      return res.status(400).json({ message: 'Invalid room ID format' });
+    }
+    
     const userId = req.user.id;
-    const roomId = req.params.roomId;
+    const roomId = new mongoose.Types.ObjectId(req.params.roomId);
 
     // Verify user is the room creator
     const room = await Room.findOne({
